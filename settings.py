@@ -44,6 +44,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'djcelery',
     'pigeonpost',
+    'lettuce.django',
 )
 
 # Celery settings
