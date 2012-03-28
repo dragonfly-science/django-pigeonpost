@@ -10,7 +10,7 @@ from django.dispatch import Signal, receiver
 
 class ContentQueue(models.Model):
     content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField() #Assume the models have an integer primary key
+    object_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
     content_object = generic.GenericForeignKey('content_type', 'object_id')
     successes = models.IntegerField(null=True, blank=True)
     failures = models.IntegerField(null=True, blank=True)
@@ -24,6 +24,7 @@ class ContentQueue(models.Model):
         unique_together = ('content_type', 'object_id',)
         ordering = ['scheduled',]
 
+
 class Outbox(models.Model):
     content = models.ForeignKey(ContentQueue)
     user = models.ForeignKey(User)
@@ -36,6 +37,7 @@ class Outbox(models.Model):
 
 email_signal = Signal(providing_args=['render_email', 'email_user', 'schedule_time'])
 
+
 @receiver(email_signal)
 def add_to_queue(sender, render_email='render_email', email_user='email_user', schedule_time=None, **kwargs):
     if not schedule_time:
@@ -43,11 +45,12 @@ def add_to_queue(sender, render_email='render_email', email_user='email_user', s
     try:
         ContentQueue.objects.get(content_object=sender)
     except ContentQueue.DoesNotExist:
-        contentqueue = ContentQueue(content_object=sender, 
-            render_email=render_email, 
+        contentqueue = ContentQueue(content_object=sender,
+            render_email=render_email,
             email_user=email_user,
             schedule_time=schedule_time
             )
+
 
 def send_email():
     sendables = ContentQueue.objects.filter(schedule_time__lt=datetime.datetime.now(), send=True)
@@ -74,12 +77,4 @@ def send_email():
         sendable.failures = failures
         sendable.sent=datetime.datetime.now()
         seandable.save()
-
-                    
-                    
-
-            
-        
-
-
 
