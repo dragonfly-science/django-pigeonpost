@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 from pigeonpost.models import ContentQueue, Outbox
 
+
 def queue_to_send(sender, **kwargs):
     # Check to see if the object is mailable
     if hasattr(sender, 'email_render') and hasattr(sender, 'email_user'):
@@ -21,13 +22,12 @@ def queue_to_send(sender, **kwargs):
             # Create a task to send
             sendmessages.delay(sender, countdown=countdown)
 
+
 @task
-def sendmessages(content, backend = EmailBackend):
+def send_messages(content, backend=EmailBackend):
     users = User.objects.all()
     for user in users:
         if content.email_user(user):
             content.email_render(user)
-            #send the message ...        
-    
-    
-    
+            # send the message
+

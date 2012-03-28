@@ -6,24 +6,24 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.db import models
 from django.dispatch import Signal, receiver
-from django.contrib.auth import User
 
 
 class ContentQueue(models.Model):
     content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField() #Assume the models have an integer primary key
+    object_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
     content_object = generic.GenericForeignKey('content_type', 'object_id')
     successes = models.IntegerField(null=True, blank=True)
     failures = models.IntegerField(null=True, blank=True)
     send = models.BooleanField(default=True)
-    sent = models.DatetimeField(null=True, blank=True)
-    render_email = TextField()
-    email_user = TextField()
+    sent = models.DateTimeField(null=True, blank=True)
+    render_email = models.TextField()
+    email_user = models.TextField()
     schedule_time = models.DateTimeField()
 
     class Meta:
         unique_together = ('content_type', 'object_id',)
-        ordering = ['scheduled',]
+        ordering = ['schedule_time',]
+
 
 class Outbox(models.Model):
     content = models.ForeignKey(ContentQueue)
@@ -37,18 +37,20 @@ class Outbox(models.Model):
 
 email_signal = Signal(providing_args=['render_email', 'email_user', 'schedule_time'])
 
+
 @receiver(email_signal)
-def add_to_queue(sender, render_email='render_email', email_user='email_user', schedule_time=None):
+def add_to_queue(sender, render_email='render_email', email_user='email_user', schedule_time=None, **kwargs):
     if not schedule_time:
         schedule_time = datetime.datetime.now()
     try:
         ContentQueue.objects.get(content_object=sender)
     except ContentQueue.DoesNotExist:
-        contentqueue = ContentQueue(content_object=sender, 
-            render_email=render_email, 
+        contentqueue = ContentQueue(content_object=sender,
+            render_email=render_email,
             email_user=email_user,
             schedule_time=schedule_time
             )
+
 
 def send_email():
     sendables = ContentQueue.objects.filter(schedule_time__lt=datetime.datetime.now(), send=True)
@@ -70,17 +72,9 @@ def send_email():
                         failures += 1
                     except:
                         pass
-         # Now make a record
-         sendable.successes = successes
-         sendable.failures = failures
-         sendable.sent=datetime.datetime.now()
-         seandable.save()
-
-                    
-                    
-
-            
-        
-
-
+        # Now make a record
+        sendable.successes = successes
+        sendable.failures = failures
+        sendable.sent=datetime.datetime.now()
+        seandable.save()
 
