@@ -64,7 +64,7 @@ def send_email():
                 if getattr(sendable.content_object, sendable.email_user)():
                     message = getattr(sendable.content_object, sendable.render_email)(user)
                     try:
-                        send_mail(subject, message, settings.PIGEONPOST_FROM_EMAIL, recipient_list=[user.email])
+                        send_mail(subject, message, message.from_email, recipient_list=[user.email])
                         out = Outbox(content=sendable, user=user, message=message, sent=datetime.datetime.now())
                         out.save()
                         successes += 1
