@@ -22,7 +22,7 @@ class ContentQueue(models.Model):
 
     class Meta:
         unique_together = ('content_type', 'object_id',)
-        ordering = ['scheduled',]
+        ordering = ['schedule_time',]
 
 
 class Outbox(models.Model):
