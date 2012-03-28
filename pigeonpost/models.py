@@ -35,10 +35,10 @@ class Outbox(models.Model):
         unique_together = ('content', 'user',)
         ordering = ['sent']
 
-email_signal = Signal(providing_args=['render_email', 'email_user', 'schedule_time'])
+pigeonpost_signal = Signal(providing_args=['render_email', 'email_user', 'schedule_time'])
 
 
-@receiver(email_signal)
+@receiver(pigeonpost_signal)
 def add_to_queue(sender, render_email='render_email', email_user='email_user', schedule_time=None, **kwargs):
     if not schedule_time:
         schedule_time = datetime.datetime.now()
