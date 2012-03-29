@@ -10,6 +10,7 @@ from pigeonpost.models import ContentQueue, Outbox
 logger = logging.getLogger('pigeonpost.tasks')
 
 
+@task
 def queue_to_send(sender, **kwargs):
     # Check to see if the object is mailable
     try:
