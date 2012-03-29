@@ -55,7 +55,7 @@ def add_to_queue(sender, render_email='render_email', schedule_time=None, **kwar
 def send_email(scheduled_time=None):
     if scheduled_time is None:
         scheduled_time = datetime.datetime.now()
-    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=True)
+    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=None)
     for sendable in sendables:
         failures = 0
         successes = 0
@@ -84,6 +84,13 @@ def send_email(scheduled_time=None):
         sendable.sent=datetime.datetime.now()
         sendable.send=False
         seandable.save()
+
+def kill_pigeons():
+    """Mark all unsent pigeons in the queue as send=False, so that they won't
+    generate any messages. This is the pigeonpost panic button"""
+    for pigeon in ContentQueue.objects.filter(send=True):
+        pigeon.send = False
+        pigeon.save()
 
 def retry(max_retries=3):
     """
