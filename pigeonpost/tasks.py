@@ -5,7 +5,7 @@ from celery.task import task
 from django.core.mail.backends.smtp import EmailBackend
 from django.contrib.auth.models import User
 
-from pigeonpost.models import ContentQueue, Outbox
+from pigeonpost.models import ContentQueue, Outbox, send_email
 
 logger = logging.getLogger('pigeonpost.tasks')
 
@@ -43,3 +43,7 @@ def send_messages(content, backend=EmailBackend):
         if msg:
             msg.send()
 
+
+@task
+def send_pending_messages():
+    send_email()
