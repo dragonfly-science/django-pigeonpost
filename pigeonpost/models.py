@@ -52,8 +52,10 @@ def add_to_queue(sender, render_email='render_email', email_user='email_user', s
             )
 
 
-def send_email():
-    sendables = ContentQueue.objects.filter(schedule_time__lt=datetime.datetime.now(), send=True)
+def send_email(scheduled_time=None):
+    if scheduled_time is None:
+        scheduled_time = datetime.datetime.now()
+    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=True)
     for sendable in sendables:
         failures = 0
         successes = 0
