@@ -1,6 +1,3 @@
-
-geon post
-
 ## Pigeonpost is a django application for sending emails
 
 In your application, create a method on your model class called
