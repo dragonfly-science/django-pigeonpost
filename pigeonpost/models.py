@@ -86,12 +86,18 @@ def send_email(scheduled_time=None):
         seandable.save()
 
 def retry(max_retries=3):
+    """
+    retry attempts to resend any emails that have failed.
+    
+    It is designed to be run from a periodicly, e.g. daily via cron.
+    """
     failures = Outbox.objects.filter(failures__lt=max_retries, succeeded=False)
     for outbox in failures:
         try:
             message.to = outbox.user.email
             message.send()
             outbox.succeeded = True
+            outbox.sent = datetime.datetime.now()
         except:
             outbox.failures = msg.failures + 1
         outbox.save()
