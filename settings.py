@@ -36,12 +36,13 @@ MIDDLEWARE_CLASSES = (
 
 INSTALLED_APPS = (
     'django.contrib.auth',
+    'django.contrib.admin',
     'django.contrib.markup',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.sitemaps',
-    'django.contrib.staticfiles',
+    #'django.contrib.staticfiles',
     'djcelery',
     'pigeonpost',
     'lettuce.django',
@@ -55,3 +56,5 @@ BROKER_PASSWORD = "guest"
 BROKER_VHOST = "/"
 
 SITE_ID = 1
+
+ROOT_URLCONF = 'pigeonpost.urls'
