@@ -39,7 +39,7 @@ def queue_to_send(sender, **kwargs):
 def send_messages(content, backend=EmailBackend):
     users = User.objects.all()
     for user in users:
-        if content.email_user(user):
-            content.email_render(user)
-            # send the message
+        msg = content.render_email(user)
+        if msg:
+            msg.send()
 
