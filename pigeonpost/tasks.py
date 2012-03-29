@@ -14,7 +14,7 @@ logger = logging.getLogger('pigeonpost.tasks')
 def queue_to_send(sender, **kwargs):
     # Check to see if the object is mailable
     try:
-        now = datetime.today()
+        now = datetime.date.today()
         countdown = 0
         if hasattr(sender, 'email_defer'):
             countdown = sender.email_defer()
@@ -26,7 +26,7 @@ def queue_to_send(sender, **kwargs):
             post = ContentQueue(content_object=sender, scheduled=scheduled)
             post.save()
             # Create a task to send
-            sendmessages.delay(sender, countdown=countdown)
+            send_messages.delay(sender, countdown=countdown)
     except AttributeError:
 	if not hasattr(sender, 'email_render') or not hasattr(sender, 'email_user'):
             logger.error('%r requires both email_render and email_user methods.' % sender)

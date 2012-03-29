@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from django.test import TestCase
+from mock import MagicMock
 from testfixtures import identity, log_capture
 
 import tasks
@@ -23,6 +24,12 @@ class DummySenderC:
     def __repr__(self):
         return u'C'
 
+class DummyCompliantSender:
+    email_render = lambda self: sys.stdout.write('email_render called')
+    email_user = lambda self: sys.stdout.write('email_user called')
+    email_defer = lambda self: 10
+    
+
 class TestTaskQueueToSend(TestCase):
     def setUp(self):
         self.old_settings = settings.LOGGING
@@ -41,7 +48,7 @@ class TestTaskQueueToSend(TestCase):
         settings.LOGGING = self.old_settings
 
     @log_capture('pigeonpost.tasks')
-    def test_logs_warning_on_bad_input(self, capture):
+    def test_error_on_bad_input(self, capture):
         logger_name = 'pigeonpost.tasks'
         msg = ' requires both email_render and email_user methods.'
         tasks.queue_to_send(DummySenderA())
@@ -52,4 +59,9 @@ class TestTaskQueueToSend(TestCase):
             (logger_name, 'ERROR', 'B' + msg),
             (logger_name, 'ERROR', 'C' + msg)
         )                    
-
+    
+    def test_that_a_defer_email_method_is_respected(self):
+        sender = DummyCompliantSender()
+        sender.defer_email = MagicMock(name='defer_email')
+        tasks.queue_to_send(sender)
+        self.assertTrue(sender.defer_email.called)
