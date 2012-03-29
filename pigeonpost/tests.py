@@ -18,15 +18,8 @@ class DummySenderB:
     def __repr__(self):
         return u'B'
 
-class DummySenderC:
-    email_user = lambda self: sys.stdout.write('email_user called')
-
-    def __repr__(self):
-        return u'C'
-
 class DummyCompliantSender:
     email_render = lambda self: sys.stdout.write('email_render called')
-    email_user = lambda self: sys.stdout.write('email_user called')
     email_defer = lambda self: 10
     
 
@@ -50,14 +43,12 @@ class TestTaskQueueToSend(TestCase):
     @log_capture('pigeonpost.tasks')
     def test_error_on_bad_input(self, capture):
         logger_name = 'pigeonpost.tasks'
-        msg = ' requires both email_render and email_user methods.'
+        msg = ' requires an email_render method.'
         tasks.queue_to_send(DummySenderA())
         tasks.queue_to_send(DummySenderB())
-        tasks.queue_to_send(DummySenderC())
         capture.check(
             (logger_name, 'ERROR', 'A' + msg),
             (logger_name, 'ERROR', 'B' + msg),
-            (logger_name, 'ERROR', 'C' + msg)
         )                    
     
     def test_that_a_defer_email_method_is_respected(self):

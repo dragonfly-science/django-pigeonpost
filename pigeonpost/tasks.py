@@ -28,8 +28,8 @@ def queue_to_send(sender, **kwargs):
             # Create a task to send
             send_messages.delay(sender, countdown=countdown)
     except AttributeError:
-	if not hasattr(sender, 'email_render') or not hasattr(sender, 'email_user'):
-            logger.error('%r requires both email_render and email_user methods.' % sender)
+	if not hasattr(sender, 'email_render'):
+            logger.error('%r requires a email_render method.' % sender)
         else:
             raise
             
