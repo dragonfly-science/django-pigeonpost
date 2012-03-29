@@ -1,13 +1,18 @@
+import datetime
+import logging
+
 from celery.task import task
 from django.core.mail.backends.smtp import EmailBackend
 from django.contrib.auth.models import User
 
 from pigeonpost.models import ContentQueue, Outbox
 
+logger = logging.getLogger('pigeonpost.tasks')
+
 
 def queue_to_send(sender, **kwargs):
     # Check to see if the object is mailable
-    if hasattr(sender, 'email_render') and hasattr(sender, 'email_user'):
+    try:
         now = datetime.today()
         countdown = 0
         if hasattr(sender, 'email_defer'):
@@ -21,6 +26,12 @@ def queue_to_send(sender, **kwargs):
             post.save()
             # Create a task to send
             sendmessages.delay(sender, countdown=countdown)
+    except AttributeError:
+	if not hasattr(sender, 'email_render') or not hasattr(sender, 'email_user'):
+            logger.error('%r requires both email_render and email_user methods.' % sender)
+        else:
+            raise
+            
 
 
 @task

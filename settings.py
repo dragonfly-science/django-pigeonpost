@@ -6,7 +6,7 @@ DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'pigeonpost',
+        'NAME': '/tmp/pigeonpost',
     }
 }
 
@@ -54,3 +54,4 @@ BROKER_USER = "guest"
 BROKER_PASSWORD = "guest"
 BROKER_VHOST = "/"
 
+SITE_ID = 1
