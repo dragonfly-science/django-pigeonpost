@@ -29,6 +29,8 @@ class Outbox(models.Model):
     user = models.ForeignKey(User)
     message = models.TextField()
     sent = models.DateTimeField()
+    succeeded = models.BooleanField()
+    failures = models.IntegerField()
 
     class Meta:
         unique_together = ('content', 'user',)
@@ -61,17 +63,20 @@ def send_email(scheduled_time=None):
             try:
                 outmessage = Outbox.objects.get(content=sendable, user=user)
             except Outbox.DoesNotExist:
-	        message = getattr(sendable.content_object, sendable.render_email)(user)
+	        render_email = getattr(sendable.content_object, sendable.render_email)
+                message = render_email(user)
                 if message:
+		    outbox = Outbox(content=sendable, user=user, message=message, succeeded=False, failures=1, sent=datetime.datetime.now())
                     try:
                         send_mail(subject, message, message.from_email, recipient_list=[user.email])
-                        out = Outbox(content=sendable, user=user, message=message, sent=datetime.datetime.now())
-                        out.save()
+                        outbox.succeeded = True
+                        outbox.failures = 0
                         successes += 1
-                    except SMTPException:
-                        failures += 1
+                    except KeyboardInterrupt:
+                        raise
                     except:
-                        pass
+                        failures += 1
+                    outbox.save()
         # Now make a record
         sendable.successes = successes
         sendable.failures = failures
