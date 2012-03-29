@@ -12,13 +12,13 @@ class ContentQueue(models.Model):
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
     content_object = generic.GenericForeignKey('content_type', 'object_id')
-    successes = models.IntegerField(null=True, blank=True)
-    failures = models.IntegerField(null=True, blank=True)
-    send = models.BooleanField(default=True)
-    sent = models.DateTimeField(null=True, blank=True)
-    render_email = models.TextField()
+    successes = models.IntegerField(null=True, blank=True, help_text="Number of successful messages sent.")
+    failures = models.IntegerField(null=True, blank=True, help_text="Number of errors encountered while sending.")
+    send = models.BooleanField(default=True, help_text="Whether this object should be sent (some time in the future) .")
+    sent = models.DateTimeField(null=True, blank=True, help_text="Indicates whether the object has been sent.")
+    render_email = models.TextField(help_text="The name of the method to be called on the sender to generates an EmailMessage for each User.")
     email_user = models.TextField()
-    schedule_time = models.DateTimeField()
+    schedule_time = models.DateTimeField(help_text="The datetime when emails should be sent.")
 
     class Meta:
         unique_together = ('content_type', 'object_id',)
@@ -52,8 +52,10 @@ def add_to_queue(sender, render_email='render_email', email_user='email_user', s
             )
 
 
-def send_email():
-    sendables = ContentQueue.objects.filter(schedule_time__lt=datetime.datetime.now(), send=True)
+def send_email(scheduled_time=None):
+    if scheduled_time is None:
+        scheduled_time = datetime.datetime.now()
+    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=True)
     for sendable in sendables:
         failures = 0
         successes = 0

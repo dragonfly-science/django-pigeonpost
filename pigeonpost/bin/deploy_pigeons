@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# run every 6 hours 
+# 1 */6 * * * PATH_TO/pigeonpost/bin/deploy_pigeons
+
+export DJANGO_SETTINGS_MODULE=pigeonpost.settings
+./manage.py deploy_pigeons
