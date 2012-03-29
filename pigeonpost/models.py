@@ -15,7 +15,7 @@ class ContentQueue(models.Model):
     successes = models.IntegerField(null=True, blank=True, help_text="Number of successful messages sent.")
     failures = models.IntegerField(null=True, blank=True, help_text="Number of errors encountered while sending.")
     send = models.BooleanField(default=True, help_text="Whether this object should be sent (some time in the future) .")
-    sent = models.DateTimeField(null=True, blank=True, help_text="Indicates whether the object has been sent.")
+    sent = models.DateTimeField(null=True, blank=True, help_text="Indicates the time that this job was sent.")
     render_email = models.TextField(help_text="The name of the method to be called on the sender to generates an EmailMessage for each User.")
     schedule_time = models.DateTimeField(help_text="The datetime when emails should be sent.")
 
