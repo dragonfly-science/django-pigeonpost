@@ -78,5 +78,6 @@ def send_email(scheduled_time=None):
         sendable.successes = successes
         sendable.failures = failures
         sendable.sent=datetime.datetime.now()
+        sendable.send=False
         seandable.save()
 
