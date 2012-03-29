@@ -1,12 +1,12 @@
 from smtplib import SMTPException
 
 from django.conf import settings
+from django.core.mail import EmailMessage
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.db import models
 from django.dispatch import Signal, receiver
-
 
 class ContentQueue(models.Model):
     content_type = models.ForeignKey(ContentType)
@@ -68,7 +68,8 @@ def send_email(scheduled_time=None):
                 if message:
 		    outbox = Outbox(content=sendable, user=user, message=message, succeeded=False, failures=1, sent=datetime.datetime.now())
                     try:
-                        send_mail(subject, message, message.from_email, recipient_list=[user.email])
+                        message.to = [user.email]
+                        message.send()
                         outbox.succeeded = True
                         outbox.failures = 0
                         successes += 1
@@ -84,3 +85,13 @@ def send_email(scheduled_time=None):
         sendable.send=False
         seandable.save()
 
+def retry(max_retries=3):
+    failures = Outbox.objects.filter(failures__lt=max_retries, succeeded=False)
+    for outbox in failures:
+        try:
+            message.to = outbox.user.email
+            message.send()
+            outbox.succeeded = True
+        except:
+            outbox.failures = msg.failures + 1
+        outbox.save()
