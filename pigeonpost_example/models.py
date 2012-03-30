@@ -12,3 +12,11 @@ class Article(models.Model):
         if 'example.com' in user.email:
             return EmailMessage('New Post: ' + self.title, self.text, from_email='anon@example.com', to=[user.email]) 
     
+class MessageToEveryone(models.Model):
+    subject = models.TextField()
+    body = models.TextField()
+
+    def render_email(self, user):
+        return EmailMessage(self.subject, self.body, from_email="agent@example.com", to=[user.email])
+
+

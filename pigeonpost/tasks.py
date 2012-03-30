@@ -21,7 +21,7 @@ def queue_to_send(sender, **kwargs):
             scheduled = now + datetime.timedelta(seconds=countdown)
         # Save it in the model
         try:
-            post = ContentQueue.get(content_object=sender)
+            post = ContentQueue.objects.get(content_object=sender)
         except ContentQueue.DoesNotExist:
             post = ContentQueue(content_object=sender, scheduled=scheduled)
             post.save()

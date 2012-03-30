@@ -1,6 +1,7 @@
 from smtplib import SMTPException
 
 from django.conf import settings
+from django.core import mail
 from django.core.mail import EmailMessage
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
@@ -55,35 +56,45 @@ def add_to_queue(sender, render_email='render_email', schedule_time=None, **kwar
 def send_email(scheduled_time=None):
     if scheduled_time is None:
         scheduled_time = datetime.datetime.now()
-    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=None)
-    for sendable in sendables:
-        failures = 0
-        successes = 0
-        for user in User.objects.filter(active=True):
-            try:
-                outmessage = Outbox.objects.get(content=sendable, user=user)
-            except Outbox.DoesNotExist:
-	        render_email = getattr(sendable.content_object, sendable.render_email)
-                message = render_email(user)
-                if message:
-		    outbox = Outbox(content=sendable, user=user, message=message, succeeded=False, failures=1, sent=datetime.datetime.now())
-                    try:
-                        message.to = [user.email]
-                        message.send()
-                        outbox.succeeded = True
-                        outbox.failures = 0
-                        successes += 1
-                    except KeyboardInterrupt:
-                        raise
-                    except:
-                        failures += 1
-                    outbox.save()
-        # Now make a record
-        sendable.successes = successes
-        sendable.failures = failures
-        sendable.sent=datetime.datetime.now()
-        sendable.send=False
-        seandable.save()
+    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=True)
+    try:
+        connection = mail.get_connection()
+        for sendable in sendables:
+            failures = 0
+            successes = 0
+            for user in User.objects.filter(active=True):
+                try:
+                    outmessage = Outbox.objects.get(content=sendable, user=user)
+                except Outbox.DoesNotExist:
+	            render_email = getattr(sendable.content_object, sendable.render_email)
+                    message = render_email(user)
+                    if message:
+		        outbox = Outbox(
+                                     content=sendable, 
+                                     user=user, 
+                                     message=message, 
+                                     succeeded=False, 
+                                     failures=1, 
+                                     sent=datetime.datetime.now())
+                        try:
+                            message.to = [user.email]
+                            connection.send_messages([message])
+                            outbox.succeeded = True
+                            outbox.failures = 0
+                            successes += 1
+                        except KeyboardInterrupt:
+                            raise
+                        except:
+                            failures += 1
+                        outbox.save()
+            # Now make a record
+            sendable.successes = successes
+            sendable.failures = failures
+            sendable.sent=datetime.datetime.now()
+            sendable.send=False
+            seandable.save()
+    finally:
+        connection.close()
 
 def kill_pigeons():
     """Mark all unsent pigeons in the queue as send=False, so that they won't
