@@ -14,9 +14,9 @@ from django.db import models
 from django.dispatch import Signal, receiver
 
 class Pigeon(models.Model):
-    source_contenttype = models.ForeignKey(ContentType)
+    source_content_type = models.ForeignKey(ContentType)
     source_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
-    source = generic.GenericForeignKey('content_type', 'object_id')
+    source = generic.GenericForeignKey('source_content_type', 'source_id')
     successes = models.IntegerField(default=0, help_text="Number of successful messages sent.")
     failures = models.IntegerField(default=0, help_text="Number of errors encountered while sending.")
     to_send = models.BooleanField(default=True, help_text="Whether this object should be sent (some time in the future) .")
@@ -25,7 +25,7 @@ class Pigeon(models.Model):
     scheduled_for = models.DateTimeField(auto_now_add=True, help_text="The datetime when emails should be sent. Defaults to ASAP.")
 
     class Meta:
-        unique_together = ('source_contenttype', 'source_id')
+        unique_together = ('source_content_type', 'source_id')
         ordering = ['scheduled_for']
 
 
@@ -38,8 +38,8 @@ class Outbox(models.Model):
     failures = models.IntegerField(default=0)
 
     class Meta:
-        unique_together = ('content', 'user')
-        ordering = ['sent']
+        unique_together = ('pigeon', 'user')
+        ordering = ['sent_at']
 
 pigeonpost_signal = Signal(providing_args=['render_email_method', 'scheduled_for'])
 

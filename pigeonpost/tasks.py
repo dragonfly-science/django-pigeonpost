@@ -4,6 +4,7 @@ import logging
 from celery.task import task
 from django.core.mail.backends.smtp import EmailBackend
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 
 from pigeonpost.models import Pigeon, Outbox, send_email
 
@@ -14,17 +15,18 @@ logger = logging.getLogger('pigeonpost.tasks')
 def queue_to_send(sender, **kwargs):
     # Check to see if the object is mailable
     try:
-        now = datetime.date.today()
+        scheduled_for = datetime.date.today()
         countdown = 0
         if hasattr(sender, 'email_defer'):
             countdown = sender.email_defer()
-            scheduled = now + datetime.timedelta(seconds=countdown)
+            scheduled += datetime.timedelta(seconds=countdown)
         # Save it in the model
         try:
-            post = Pigeon.objects.get(content_object=sender)
+            pigeon = Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
+                source_id=sender.id)
         except Pigeon.DoesNotExist:
-            post = Pigeon(content_object=sender, scheduled=scheduled)
-            post.save()
+            pigeon = Pigeon(source=sender, scheduled_for=scheduled_for)
+            pigeon.save()
             # Create a task to send
             send_messages.delay(sender, countdown=countdown)
     except AttributeError:

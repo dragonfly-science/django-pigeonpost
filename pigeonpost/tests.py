@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import loading
+from django.db.models import Model, loading
 from django.test import TestCase
 from mock import MagicMock
 from testfixtures import identity, log_capture
@@ -15,17 +15,17 @@ import models
 import pigeonpost_example.models
 from pigeonpost_example.models import MessageToEveryone
 
-class DummySenderA:
+class DummySenderA(Model):
     def __repr__(self):
         return u'A'
 
-class DummySenderB:
+class DummySenderB(Model):
     email_render = lambda self: sys.stdout.write('email_render called')
 
     def __repr__(self):
         return u'B'
 
-class DummyCompliantSender:
+class DummyCompliantSender(Model):
     email_render = lambda self: sys.stdout.write('email_render called')
     email_defer = lambda self: 10
     
