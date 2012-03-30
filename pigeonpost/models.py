@@ -1,4 +1,8 @@
 from smtplib import SMTPException
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 from django.conf import settings
 from django.core import mail
@@ -9,89 +13,74 @@ from django.contrib.contenttypes import generic
 from django.db import models
 from django.dispatch import Signal, receiver
 
-class ContentQueue(models.Model):
-    content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
-    content_object = generic.GenericForeignKey('content_type', 'object_id')
-    successes = models.IntegerField(null=True, blank=True, help_text="Number of successful messages sent.")
-    failures = models.IntegerField(null=True, blank=True, help_text="Number of errors encountered while sending.")
-    send = models.BooleanField(default=True, help_text="Whether this object should be sent (some time in the future) .")
-    sent = models.DateTimeField(null=True, blank=True, help_text="Indicates the time that this job was sent.")
-    render_email = models.TextField(help_text="The name of the method to be called on the sender to generates an EmailMessage for each User.")
-    schedule_time = models.DateTimeField(auto_now_add=True, help_text="The datetime when emails should be sent. Defaults to ASAP.")
+class Pigeon(models.Model):
+    source_contenttype = models.ForeignKey(ContentType)
+    source_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
+    source = generic.GenericForeignKey('content_type', 'object_id')
+    successes = models.IntegerField(default=0, help_text="Number of successful messages sent.")
+    failures = models.IntegerField(default=0, help_text="Number of errors encountered while sending.")
+    to_send = models.BooleanField(default=True, help_text="Whether this object should be sent (some time in the future) .")
+    sent_at = models.DateTimeField(null=True, blank=True, help_text="Indicates the time that this job was sent.")
+    render_email_method = models.TextField(default="render_email", help_text="The name of the method to be called on the sender to generates an EmailMessage for each User.")
+    scheduled_for = models.DateTimeField(auto_now_add=True, help_text="The datetime when emails should be sent. Defaults to ASAP.")
 
     class Meta:
-        unique_together = ('content_type', 'object_id',)
-        ordering = ['schedule_time',]
+        unique_together = ('source_contenttype', 'source_id')
+        ordering = ['scheduled_for']
 
 
 class Outbox(models.Model):
-    content = models.ForeignKey(ContentQueue)
+    pigeon = models.ForeignKey(Pigeon)
     user = models.ForeignKey(User)
     message = models.TextField()
-    sent = models.DateTimeField()
-    succeeded = models.BooleanField()
-    failures = models.IntegerField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    succeeded = models.BooleanField(default=True)
+    failures = models.IntegerField(default=0)
 
     class Meta:
-        unique_together = ('content', 'user',)
+        unique_together = ('content', 'user')
         ordering = ['sent']
 
-pigeonpost_signal = Signal(providing_args=['render_email', 'schedule_time'])
+pigeonpost_signal = Signal(providing_args=['render_email_method', 'scheduled_for'])
 
 
 @receiver(pigeonpost_signal)
-def add_to_queue(sender, render_email='render_email', schedule_time=None, **kwargs):
-    if not schedule_time:
-        schedule_time = datetime.datetime.now()
+def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, **kwargs):
+    if not scheduled_for:
+        scheduled_for = datetime.datetime.now()
     try:
-        ContentQueue.objects.get(content_object=sender)
-    except ContentQueue.DoesNotExist:
-        contentqueue = ContentQueue(content_object=sender,
-            render_email=render_email,
-            schedule_time=schedule_time
-            )
+        Pigeon.objects.get(source=sender)
+    except Pigeon.DoesNotExist:
+        p = Pigeon(source=sender, render_email_method=render_email_method, scheduled_for=scheduled_for)
+        p.save()
 
 
-def send_email(scheduled_time=None):
-    if scheduled_time is None:
-        scheduled_time = datetime.datetime.now()
-    sendables = ContentQueue.objects.filter(schedule_time__lt=scheduled_time, send=True)
+def send_email(as_of=None):
+    if as_of is None:
+        as_of = datetime.datetime.now()
+    sendables = Pigeon.objects.filter(schedule_time__lt=as_of, to_send=True)
     try:
         connection = mail.get_connection()
-        for sendable in sendables:
-            failures = 0
-            successes = 0
+        for pigeon in sendables:
             for user in User.objects.filter(active=True):
-                try:
-                    outmessage = Outbox.objects.get(content=sendable, user=user)
-                except Outbox.DoesNotExist:
-	            render_email = getattr(sendable.content_object, sendable.render_email)
-                    message = render_email(user)
-                    if message:
-		        outbox = Outbox(
-                                     content=sendable, 
-                                     user=user, 
-                                     message=message, 
-                                     succeeded=False, 
-                                     failures=1, 
-                                     sent=datetime.datetime.now())
-                        try:
-                            message.to = [user.email]
-                            connection.send_messages([message])
-                            outbox.succeeded = True
-                            outbox.failures = 0
-                            successes += 1
-                        except KeyboardInterrupt:
-                            raise
-                        except:
-                            failures += 1
+	        render_email = getattr(pigeon.source, pigeon.render_email_method)
+                message = render_email(user)
+                if message:
+                    try:
+                        Outbox.objects.get(pigeon=pigeon, user=user)
+                    except Outbox.DoesNotExist:
+		        outbox = Outbox(content=pigeon,user=user, message=pickle.dumps(message, 2))
+                        res = connection.send_messages([message])
+                        if res == 1:
+                            pigeon.successes += 1
+                        else:
+                            outbox.succeeded = False
+                            outbox.failures = 1
+                            pigeon.failures += 1
                         outbox.save()
             # Now make a record
-            sendable.successes = successes
-            sendable.failures = failures
-            sendable.sent=datetime.datetime.now()
-            sendable.send=False
+            pigeon.sent_at=datetime.datetime.now()
+            pigeon.to_send=False
             seandable.save()
     finally:
         connection.close()
@@ -99,7 +88,7 @@ def send_email(scheduled_time=None):
 def kill_pigeons():
     """Mark all unsent pigeons in the queue as send=False, so that they won't
     generate any messages. This is the pigeonpost panic button"""
-    for pigeon in ContentQueue.objects.filter(send=True):
+    for pigeon in Pigeon.objects.filter(send=True):
         pigeon.send = False
         pigeon.save()
 

@@ -96,12 +96,6 @@ class TestQueuingMessages(TestCase):
             django.core.mail.outbox = []
         settings.EMAIL_BACKEND = self.old_email_backend
 
-    def test_can_create_queue(self):
-        queue = models.ContentQueue(
-            content_type=ContentType.objects.get(app_label="pigeonpost_example", model="messagetoeveryone"),
-            object_id=self.article.id
-        )
-
     def test_inactive_users_are_ignored(self):
         try:
             inactive = User.objects.get(username="inactive")

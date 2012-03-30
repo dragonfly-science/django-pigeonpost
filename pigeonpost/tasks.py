@@ -5,7 +5,7 @@ from celery.task import task
 from django.core.mail.backends.smtp import EmailBackend
 from django.contrib.auth.models import User
 
-from pigeonpost.models import ContentQueue, Outbox, send_email
+from pigeonpost.models import Pigeon, Outbox, send_email
 
 logger = logging.getLogger('pigeonpost.tasks')
 
@@ -21,9 +21,9 @@ def queue_to_send(sender, **kwargs):
             scheduled = now + datetime.timedelta(seconds=countdown)
         # Save it in the model
         try:
-            post = ContentQueue.objects.get(content_object=sender)
-        except ContentQueue.DoesNotExist:
-            post = ContentQueue(content_object=sender, scheduled=scheduled)
+            post = Pigeon.objects.get(content_object=sender)
+        except Pigeon.DoesNotExist:
+            post = Pigeon(content_object=sender, scheduled=scheduled)
             post.save()
             # Create a task to send
             send_messages.delay(sender, countdown=countdown)
