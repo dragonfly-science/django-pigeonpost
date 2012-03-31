@@ -1,17 +1,10 @@
-import logging
 import datetime
 
 from django.conf import settings
 settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
-
-from django.core import mail
-from django.core.management import call_command
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Model, loading
 from django.test import TestCase
-from mock import MagicMock
-from testfixtures import identity, log_capture
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost_example.models import Message
