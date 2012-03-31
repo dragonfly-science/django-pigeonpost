@@ -1,6 +1,3 @@
-import djcelery
-djcelery.setup_loader()
-
 DEBUG = True
 
 DATABASES = {
@@ -43,17 +40,12 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.sitemaps',
     #'django.contrib.staticfiles',
-    'djcelery',
     'pigeonpost',
-    'lettuce.django',
+    'pigeonpost_example',
+    'django_coverage',
 )
 
-# Celery settings
-BROKER_HOST = "localhost"
-BROKER_PORT = 5672
-BROKER_USER = "guest"
-BROKER_PASSWORD = "guest"
-BROKER_VHOST = "/"
+SECRET_KEY = '959684cb7a188abc25b9a504db03fbe3'
 
 SITE_ID = 1
 

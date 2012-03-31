@@ -2,3 +2,5 @@
 *~
 *.swp
 .pid
+htmlcov/*
+.coverage
