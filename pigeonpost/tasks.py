@@ -8,7 +8,6 @@ from django.core import mail
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.dispatch import Signal, receiver
-from django.core.serializers import serialize
 
 from pigeonpost.models import Pigeon, Outbox
 
@@ -76,10 +75,9 @@ def retry(max_retries=3):
     failures = Outbox.objects.filter(failures__lt=max_retries, succeeded=False)
     for outbox in failures:
         try:
-            message.to = outbox.user.email
-            message.send()
+            pickle.load(outbox.message).send()
             outbox.succeeded = True
             outbox.sent = datetime.datetime.now()
         except:
-            outbox.failures = msg.failures + 1
+            outbox.failures +=  1
         outbox.save()
