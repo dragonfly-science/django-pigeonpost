@@ -10,10 +10,10 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 
 from pigeonpost.models import Pigeon, Outbox
-from pigeonpost.signals import pigeonpost_signal, pigeonpost_pre_send, pigeonpost_post_send
+from pigeonpost.signals import pigeonpost_queue, pigeonpost_pre_send, pigeonpost_post_send
 
 
-@receiver(pigeonpost_signal)
+@receiver(pigeonpost_queue)
 def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=0, **kwargs):
     if not scheduled_for:
         scheduled_for = datetime.datetime.now()
@@ -52,7 +52,7 @@ def send_email(force=False):
                                 outbox.succeeded = False
                                 outbox.failures = 1
                                 pigeon.failures += 1
-                            pigeonpost_post_send(sender=outbox)
+                            pigeonpost_post_send.send(sender=outbox)
                             outbox.save()
             finally:
                 pigeon.sent_at = datetime.datetime.now()
