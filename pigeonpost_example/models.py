@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.db import models
-from pigeonpost.tasks import pigeonpost_signal
+
+from pigeonpost.signals import pigeonpost_queue, pigeonpost_message
 
 # Basic Usage
 class Profile(models.Model):

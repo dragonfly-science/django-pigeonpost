@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 
 from pigeonpost.models import Pigeon, Outbox
-from pigeonpost.signals import pigeonpost_signal
+from pigeonpost.signals import pigeonpost_signal, pigeonpost_pre_send, pigeonpost_post_send
 
 
 @receiver(pigeonpost_signal)
@@ -44,6 +44,7 @@ def send_email(force=False):
                             Outbox.objects.get(pigeon=pigeon, user=user)
                         except Outbox.DoesNotExist:
                             outbox = Outbox(pigeon=pigeon, user=user, message=pickle.dumps(message, 0))
+                            pigeonpost_pre_send.send(sender=outbox)
                             res = connection.send_messages([message])
                             if res == 1:
                                 pigeon.successes += 1
@@ -51,6 +52,7 @@ def send_email(force=False):
                                 outbox.succeeded = False
                                 outbox.failures = 1
                                 pigeon.failures += 1
+                            pigeonpost_post_send(sender=outbox)
                             outbox.save()
             finally:
                 pigeon.sent_at = datetime.datetime.now()
