@@ -1,7 +1,10 @@
 *.pyc
 *~
 *.swp
-.pid
-htmlcov/*
 .coverage
+.pid
+
+pip-log.txt
+
 build/*
+htmlcov/*
