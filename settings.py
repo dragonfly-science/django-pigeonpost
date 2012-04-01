@@ -50,3 +50,9 @@ SECRET_KEY = '959684cb7a188abc25b9a504db03fbe3'
 SITE_ID = 1
 
 ROOT_URLCONF = 'pigeonpost.urls'
+
+
+# Testing settings for django coverage
+COVERAGE_REPORT_HTML_OUTPUT_DIR = 'htmlcov'
+COVERAGE_TEST_RUNNER = 'django_coverage.coverage_runner.CoverageRunner'
+COVERAGE_USE_CACHE = True
