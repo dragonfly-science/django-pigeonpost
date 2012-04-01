@@ -7,11 +7,11 @@ except ImportError:
 from django.core import mail
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
-from django.dispatch import Signal, receiver
+from django.dispatch import receiver
 
 from pigeonpost.models import Pigeon, Outbox
+from pigeonpost.signals import pigeonpost_signal
 
-pigeonpost_signal = Signal(providing_args=['render_email_method', 'scheduled_for', 'defer_for'])
 
 @receiver(pigeonpost_signal)
 def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=0, **kwargs):
