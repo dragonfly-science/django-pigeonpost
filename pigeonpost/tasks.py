@@ -43,6 +43,7 @@ def process_outbox(max_retries=3, pigeon=None):
         connection = mail.get_connection()
         for msg in Outbox.objects.filter(**query_params):
             email = pickle.loads(msg.message.encode('utf-8'))
+            #successful = email.send()
             successful = connection.send_messages([email])
             if not successful:
                 msg.failures += 1
