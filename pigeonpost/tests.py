@@ -10,7 +10,7 @@ from django.test import TestCase
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost_example.models import News, Profile
-from pigeonpost.tasks import send_email, kill_pigeons
+from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_outbox
 
 class ExampleMessage(TestCase):
     """
@@ -19,12 +19,15 @@ class ExampleMessage(TestCase):
     def setUp(self):
         self.message = News(subject='Test', body='A test message')
         self.message.save()
-        self.pigeon = Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(self.message),
+        self.pigeon = Pigeon.objects.get(
+            source_content_type=ContentType.objects.get_for_model(self.message),
             source_id=self.message.id)
+        self.pigeon.save()
         andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
         boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
         chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
-        [user.save() for user in [andrew, boris, chelsea]]
+        self.users = [andrew, boris, chelsea]
+        [user.save() for user in self.users]
         p1 = Profile(user=andrew, subscribed_to_news=True)
         p2 = Profile(user=boris, subscribed_to_news=True)
         p3 = Profile(user=chelsea, subscribed_to_news=False)
@@ -93,6 +96,7 @@ class ExampleMessage(TestCase):
         send_email(force=True)
         messages = Outbox.objects.all()
         assert(len(messages) == 2)
+
 
 class FakeConnection:
     def send_messages(*msgs, **meh):

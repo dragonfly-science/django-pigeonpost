@@ -12,6 +12,53 @@ from django.dispatch import receiver
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost.signals import pigeonpost_queue, pigeonpost_pre_send, pigeonpost_post_send
 
+def process_queue(force=False):
+    """
+    Takes messages from queue, adds them to Outbox.
+    """
+    if force:
+        pigeons = Pigeon.objects.filter(to_send=True)
+    else:
+        pigeons = Pigeon.objects.filter(scheduled_for__lt=datetime.datetime.now(), to_send=True)
+    for pigeon in pigeons:
+        render_email = getattr(pigeon.source, pigeon.render_email_method)
+        users = User.objects.filter(is_active=True)
+        for user in users:
+            message = render_email(user)
+            if message:
+	        try:
+                    Outbox.objects.get(pigeon=pigeon, user=user)
+                except Outbox.DoesNotExist:
+                    Outbox(pigeon=pigeon, user=user, message=pickle.dumps(message, 0)).save()
+
+def process_outbox(force=False, max_retries=3):
+    """
+    Sends mail from Outbox.
+    """
+    if force:
+        pigeons = Pigeon.objects.filter(to_send=True)
+    else:
+        pigeons = Pigeon.objects.filter(scheduled_for__lt=datetime.datetime.now(), to_send=True)
+    try:
+        connection = mail.get_connection()
+        for p in pigeons:
+            for o in Outbox.objects.filter(pigeon=p, failures__lt=max_retries):
+                email = pickle.loads(pickle.dumps(o.message))
+                successful = connection.send_messages([email])
+                if successful:
+                    p.successes += successful
+                else:
+                    p.failures += 1
+                    o.succeeded = False
+                    o.failures += 1
+                p.save()
+                o.save()
+            p.to_send = False
+            p.sent_at = datetime.datetime.now()
+            p.save()
+    finally:
+        connection.close()
+    
 
 @receiver(pigeonpost_queue)
 def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=0, **kwargs):
@@ -27,39 +74,12 @@ def add_to_queue(sender, render_email_method='render_email', scheduled_for=None,
         p.save()
 
 
-def send_email(force=False):
-    if force:
-        pigeons = Pigeon.objects.filter(to_send=True)
-    else:
-        pigeons = Pigeon.objects.filter(scheduled_for__lt=datetime.datetime.now(), to_send=True)
-    try:
-        connection = mail.get_connection()
-        for pigeon in pigeons:
-            try:
-                render_email = getattr(pigeon.source, pigeon.render_email_method)
-                for user in User.objects.filter(is_active=True):
-                    message = render_email(user)
-                    if message:
-                        try:
-                            Outbox.objects.get(pigeon=pigeon, user=user)
-                        except Outbox.DoesNotExist:
-                            outbox = Outbox(pigeon=pigeon, user=user, message=pickle.dumps(message, 0))
-                            pigeonpost_pre_send.send(sender=outbox)
-                            res = connection.send_messages([message])
-                            if res == 1:
-                                pigeon.successes += 1
-                            else:
-                                outbox.succeeded = False
-                                outbox.failures = 1
-                                pigeon.failures += 1
-                            pigeonpost_post_send.send(sender=outbox)
-                            outbox.save()
-            finally:
-                pigeon.sent_at = datetime.datetime.now()
-                pigeon.to_send = False
-                pigeon.save()
-    finally:
-        connection.close()
+def deploy_pigeons(force=False):
+    process_queue(force=force)
+    process_outbox(force=force)
+
+#TODO get refactor sorted
+send_email = deploy_pigeons
 
 def kill_pigeons():
     """Mark all unsent pigeons in the queue as send=False, so that they won't
