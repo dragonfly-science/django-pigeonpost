@@ -78,13 +78,8 @@ class TestExampleMessage(TestCase):
         """
         send_email(force=True)
         messages = Outbox.objects.all()
-        try:
-            assert(len(messages) == 2)
-            assert(len(mail.outbox) == 2)
-        except AssertionError:
-            print messages,
-            print mail.outbox
-            raise
+        assert(len(messages) == 2)
+        assert(len(mail.outbox) == 2)
     
     def test_kill_pigeons(self):
         """
@@ -103,13 +98,8 @@ class TestExampleMessage(TestCase):
         send_email(force=True)
         send_email(force=True)
         messages = Outbox.objects.all()
-        try:
-            assert(len(messages) == 2)
-            assert(len(mail.outbox) == 2)
-        except AssertionError:
-            print messages,
-            print mail.outbox
-            raise
+        assert(len(messages) == 2)
+        assert(len(mail.outbox) == 2)
 
 class FakeSMTPConnection:
     def send_messages(*msgs, **meh):
@@ -122,7 +112,7 @@ class TestFaultyConnection(TestExampleMessage):
     def setUp(self):
         super(TestFaultyConnection, self).setUp()
         self._get_conn = mail.get_connection
-        mail.get_connection = lambda: FakeSMTPConnection()
+        mail.get_connection = lambda *aa, **kw: FakeSMTPConnection()
     
     def tearDown(self):
         mail.get_connection = self._get_conn
@@ -138,4 +128,9 @@ class TestFaultyConnection(TestExampleMessage):
             assert(ob.failures == 1)
             assert(ob.pigeon.failures > 0)
         
+    def test_message_not_sent_more_than_once(self):
+        pass
+
+    def test_message_sent_with_force(self):
+        pass
         
