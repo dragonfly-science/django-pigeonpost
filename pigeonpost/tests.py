@@ -27,7 +27,7 @@ class ExampleMessage(TestCase):
         [user.save() for user in [andrew, boris, chelsea]]
         p1 = Profile(user=andrew, subscribed_to_news=True)
         p2 = Profile(user=boris, subscribed_to_news=True)
-        p3 = Profile(user=chelsea, subscribed_to_news=True)
+        p3 = Profile(user=chelsea, subscribed_to_news=False)
         [p.save() for p in [p1, p2, p3]]
         
     def test_to_send(self):
