@@ -45,6 +45,6 @@ class ModeratedNews(models.Model):
             # items remain published.
             pigeonpost_queue.send(sender=self, defer_for=6*60*60) 
             for user in Users.objects.filter(is_staff=True): 
-                pigeonpost_message.send(sender=self, message=self.render_email(user=user))
+                pigeonpost_immediate.send(sender=self, message=self.render_email(user=user), user=user)
         
         
