@@ -10,7 +10,8 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 
 from pigeonpost.models import Pigeon, Outbox
-from pigeonpost.signals import pigeonpost_queue, pigeonpost_pre_send, pigeonpost_post_send
+from pigeonpost.signals import pigeonpost_queue, pigeonpost_immediate
+from pigeonpost.signals import pigeonpost_pre_send, pigeonpost_post_send
 
 def process_queue(force=False):
     """
