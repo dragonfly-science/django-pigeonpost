@@ -33,9 +33,6 @@ class TestExampleMessage(TestCase):
         p3 = Profile(user=chelsea, subscribed_to_news=False)
         [p.save() for p in [p1, p2, p3]]
         
-#    def tearDown(self):
-#        mail.outbox = []
-
     def test_to_send(self):
         """
         When a message is added, the field 'to_send' should be True
