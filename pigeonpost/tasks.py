@@ -31,34 +31,26 @@ def process_queue(force=False):
                 except Outbox.DoesNotExist:
                     Outbox(pigeon=pigeon, user=user, message=pickle.dumps(message, 0)).save()
 
-def process_outbox(force=False, max_retries=3):
+def process_outbox(max_retries=3, pigeon=None):
     """
     Sends mail from Outbox.
     """
-    if force:
-        pigeons = Pigeon.objects.filter(to_send=True)
-    else:
-        pigeons = Pigeon.objects.filter(scheduled_for__lt=datetime.datetime.now(), to_send=True)
+    query_params = dict(succeeded=False, failures__lt=max_retriex)
+    if pigeon:
+        query_params['pigeon'] = pigeon
     try:
         connection = mail.get_connection()
-        for p in pigeons:
-            for o in Outbox.objects.filter(pigeon=p, failures__lt=max_retries):
-                email = pickle.loads(pickle.dumps(o.message))
-                successful = connection.send_messages([email])
-                if successful:
-                    p.successes += successful
-                else:
-                    p.failures += 1
-                    o.succeeded = False
-                    o.failures += 1
-                p.save()
-                o.save()
-            p.to_send = False
-            p.sent_at = datetime.datetime.now()
-            p.save()
+        for msg in Outbox.objects.filter(**query_params):
+            email = pickle.loads(pickle.dumps(o.message))
+            successful = connection.send_messages([email])
+            if not successful:
+                msg.failures += 1
+            msg.succeeded = bool(successful)
+            msg.sent_at = datetime.datetime.now()
+            msg.save()
     finally:
         connection.close()
-    
+
 
 @receiver(pigeonpost_queue)
 def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=0, **kwargs):
