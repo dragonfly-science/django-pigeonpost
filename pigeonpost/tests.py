@@ -12,7 +12,7 @@ from pigeonpost.models import Pigeon, Outbox
 from pigeonpost_example.models import News, Profile
 from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_outbox
 
-class ExampleMessage(TestCase):
+class TestExampleMessage(TestCase):
     """
     Test that the example message gets added to the queue when it is saved
     """
@@ -33,6 +33,9 @@ class ExampleMessage(TestCase):
         p3 = Profile(user=chelsea, subscribed_to_news=False)
         [p.save() for p in [p1, p2, p3]]
         
+#    def tearDown(self):
+#        mail.outbox = []
+
     def test_to_send(self):
         """
         When a message is added, the field 'to_send' should be True
@@ -70,6 +73,7 @@ class ExampleMessage(TestCase):
         send_email()
         messages = Outbox.objects.all()
         assert(len(messages) == 0)
+        assert(len(mail.outbox) == 0)
 
     def test_message_sent_with_force(self):
         """
@@ -77,7 +81,13 @@ class ExampleMessage(TestCase):
         """
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 2)
+        try:
+            assert(len(messages) == 2)
+            assert(len(mail.outbox) == 2)
+        except AssertionError:
+            print messages,
+            print mail.outbox
+            raise
     
     def test_kill_pigeons(self):
         """
@@ -87,6 +97,7 @@ class ExampleMessage(TestCase):
         send_email(force=True)
         messages = Outbox.objects.all()
         assert(len(messages) == 0)
+        assert(len(mail.outbox) == 0)
 
     def test_message_not_sent_more_than_once(self):
         """
@@ -95,21 +106,26 @@ class ExampleMessage(TestCase):
         send_email(force=True)
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 2)
+        try:
+            assert(len(messages) == 2)
+            assert(len(mail.outbox) == 2)
+        except AssertionError:
+            print messages,
+            print mail.outbox
+            raise
 
-
-class FakeConnection:
+class FakeSMTPConnection:
     def send_messages(*msgs, **meh):
         return 0
 
     def close(*aa, **kwaa):
         return True
 
-class FaultyConnection(ExampleMessage):
+class TestFaultyConnection(TestExampleMessage):
     def setUp(self):
-        super(FaultyConnection, self).setUp()
+        super(TestFaultyConnection, self).setUp()
         self._get_conn = mail.get_connection
-        mail.get_connection = lambda: FakeConnection()
+        mail.get_connection = lambda: FakeSMTPConnection()
     
     def tearDown(self):
         mail.get_connection = self._get_conn
