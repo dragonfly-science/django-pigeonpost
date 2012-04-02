@@ -36,13 +36,13 @@ def process_outbox(max_retries=3, pigeon=None):
     """
     Sends mail from Outbox.
     """
-    query_params = dict(succeeded=False, failures__lt=max_retriex)
+    query_params = dict(succeeded=False, failures__lt=max_retries)
     if pigeon:
         query_params['pigeon'] = pigeon
     try:
         connection = mail.get_connection()
         for msg in Outbox.objects.filter(**query_params):
-            email = pickle.loads(pickle.dumps(o.message))
+            email = pickle.loads(pickle.dumps(msg.message))
             successful = connection.send_messages([email])
             if not successful:
                 msg.failures += 1
@@ -72,7 +72,7 @@ def add_to_queue(sender, render_email_method='render_email', scheduled_for=None,
 
 def deploy_pigeons(force=False):
     process_queue(force=force)
-    process_outbox(force=force)
+    process_outbox()
 
 #TODO get refactor sorted
 send_email = deploy_pigeons
