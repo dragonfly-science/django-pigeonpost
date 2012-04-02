@@ -119,9 +119,6 @@ class FaultyConnection(ExampleMessage):
         for ob in outboxes:
             assert(ob.succeeded == False)
             assert(ob.failures == 1)
-        
-        pigeons = Pigeon.objects.all()
-        for p in pigeons:
-            assert(p.failures > 0)
+            assert(ob.pigeon.failures > 0)
         
         
