@@ -20,11 +20,11 @@ class Pigeon(models.Model):
 
 
 class Outbox(models.Model):
-    pigeon = models.ForeignKey(Pigeon)
+    pigeon = models.ForeignKey(Pigeon, null=True, blank=True)
     user = models.ForeignKey(User)
     message = models.TextField()
-    sent_at = models.DateTimeField(auto_now_add=True)
-    succeeded = models.BooleanField(default=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    succeeded = models.BooleanField(default=False)
     failures = models.IntegerField(default=0)
 
     class Meta:
