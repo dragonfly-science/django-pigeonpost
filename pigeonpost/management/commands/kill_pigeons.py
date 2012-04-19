@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from pigeonpost.models import kill_pigeons
+from pigeonpost.tasks import kill_pigeons
 
 class Command(BaseCommand):
     help = "The pigeonpost panicbutton. Stops any pigeons in the queue generating email messages"

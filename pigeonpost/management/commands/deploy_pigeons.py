@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from pigeonpost.models import send_email
+from pigeonpost.tasks import send_email
 
 class Command(BaseCommand):
     help = "Sends any pending emails in the ContentQueue"
