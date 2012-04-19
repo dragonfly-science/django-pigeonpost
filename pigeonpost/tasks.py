@@ -54,7 +54,7 @@ def process_outbox(max_retries=3, pigeon=None):
         connection.close()
 
 @receiver(pigeonpost_immediate)
-def add_immediate_message_to_outbox(sender, message, user):
+def add_immediate_message_to_outbox(sender, message, user, **kwargs):
     Outbox(message=pickle.dumps(message), user=user).save()
 
 @receiver(pigeonpost_queue)
