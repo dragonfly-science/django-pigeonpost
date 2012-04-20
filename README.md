@@ -80,33 +80,38 @@ Emails are not sent immediately. This allows a chance for amendments and
 for the messags to be blocked by admins if required. Once that time period
 passes, messages are sent.
 
-## Examples
+## Example
 
-### Common code
+### Send everyone an email once a Post is saved.
 
 ```python
 from django.db import models
 from django.core.mail import EmailMessage
 
+from pigeonpost.signals import pigeonpost_queue
+
 class Post(models.Model):
    text = models.TextField()
    title = models.CharField()
-```
-
-### Sending everyone an email once a Post has been created
-
-```python
    
    def render_email(self, user):
       subject = self.title
       body = self.text
       return EmailMessage(subject, body to=[user.email])
+   
+   def save(self, *args, **kwargs):
+       """
+       Post the message when it is saved. Defer sending for 6 hours
+       """
+       super(Post, self).save(*args, **kwargs)
+       pigeonpost_queue.send(sender=self, defer_for=6*60*60) 
 ```
 
 ### Sending email to people from a common domain 
 
 ```python
-    
+
+class RestrictedPost(Post):
     def render_email(self, user):
         if user.email.rsplit('@')[1] == 'example.com':
             return EmailMessage(self.title, self.text, to=[user.email])
