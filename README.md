@@ -110,7 +110,6 @@ class Post(models.Model):
 ### Sending email to people from a common domain 
 
 ```python
-
 class RestrictedPost(Post):
     def render_email(self, user):
         if user.email.rsplit('@')[1] == 'example.com':
@@ -119,8 +118,10 @@ class RestrictedPost(Post):
 
 ### Cron
 
-```cron
-0 0 * * * python /path/to/project/manage.py deploy_pigeons
+Check for any new messages to send every 10 minutes. 
+
+```
+*/10 * * * * python /path/to/project/manage.py deploy_pigeons
 ```
 
 
