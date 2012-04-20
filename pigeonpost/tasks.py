@@ -66,7 +66,7 @@ def process_outbox(max_retries=3, pigeon=None):
             msg.sent_at = datetime.datetime.now()
             msg.save()
     except (smtplib.SMTPException, smtplib.socket.error) as err:
-        send_logger.error()
+        send_logger.exception(err.args[0])
     finally:
         connection.close()
         send_logger.debug("Connection closed to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
