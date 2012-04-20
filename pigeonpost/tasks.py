@@ -56,11 +56,13 @@ def process_outbox(max_retries=3, pigeon=None):
         send_logger.debug("Connection made to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
             email = pickle.loads(msg.message.encode('utf-8'))
-            #successful = email.send()
+            pigeonpost_pre_send.send(email)
             successful = connection.send_messages([email])
+            successful = bool(successful)
+            pigeonpost_post_send.send(email, successful=successful)
             if not successful:
                 msg.failures += 1
-            msg.succeeded = bool(successful)
+            msg.succeeded = successful
             msg.sent_at = datetime.datetime.now()
             msg.save()
     except (smtplib.SMTPException, smtplib.socket.error) as err:

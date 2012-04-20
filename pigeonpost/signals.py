@@ -8,4 +8,4 @@ pigeonpost_message = Signal(providing_args=['message'])
 
 pigeonpost_pre_send = Signal()
 
-pigeonpost_post_send = Signal()
+pigeonpost_post_send = Signal(providing_args=['successful'])
