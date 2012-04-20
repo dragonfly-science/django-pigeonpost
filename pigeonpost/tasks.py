@@ -1,4 +1,6 @@
 import datetime
+import logging
+import smtplib
 try:
     import cPickle as pickle
 except ImportError:
@@ -13,7 +15,10 @@ from pigeonpost.models import Pigeon, Outbox
 from pigeonpost.signals import pigeonpost_queue, pigeonpost_immediate
 from pigeonpost.signals import pigeonpost_pre_send, pigeonpost_post_send
 
-def process_queue(force=False):
+send_logger = logging.getLogger('pigeonpost.send')
+dryrun_logger = logging.getLogger('pigeonpost.dryrun')
+
+def process_queue(force=False, dry_run=False):
     """
     Takes messages from queue, adds them to Outbox.
     """
@@ -25,12 +30,19 @@ def process_queue(force=False):
         render_email = getattr(pigeon.source, pigeon.render_email_method)
         users = User.objects.filter(is_active=True)
         for user in users:
-            message = render_email(user)
-            if message:
-	        try:
+            mail = render_email(user)
+            if dry_run:
+                try:
+                    message = 'created [{0}]\tUser ID: {1} ({2})'.format(mail.message().as_string().replace('\n', '\t'), user.pk, user.email)
+                except AttributeError:
+                    message = 'pass\tUser ID: {0} ({1})'.format(user.pk, user.email)
+                dryrun_logger.debug(message)
+                continue
+            if mail:
+                try:
                     Outbox.objects.get(pigeon=pigeon, user=user)
                 except Outbox.DoesNotExist:
-                    Outbox(pigeon=pigeon, user=user, message=pickle.dumps(message, 0)).save()
+                    Outbox(pigeon=pigeon, user=user, message=pickle.dumps(mail, 0)).save()
 
 def process_outbox(max_retries=3, pigeon=None):
     """
@@ -41,6 +53,7 @@ def process_outbox(max_retries=3, pigeon=None):
         query_params['pigeon'] = pigeon
     try:
         connection = mail.get_connection()
+        send_logger.debug("Connection made to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
             email = pickle.loads(msg.message.encode('utf-8'))
             #successful = email.send()
@@ -50,8 +63,11 @@ def process_outbox(max_retries=3, pigeon=None):
             msg.succeeded = bool(successful)
             msg.sent_at = datetime.datetime.now()
             msg.save()
+    except (smtplib.SMTPException, smtplib.socket.error) as err:
+        send_logger.error()
     finally:
         connection.close()
+        send_logger.debug("Connection closed to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
 
 @receiver(pigeonpost_immediate)
 def add_immediate_message_to_outbox(sender, message, user, **kwargs):
@@ -71,9 +87,10 @@ def add_to_queue(sender, render_email_method='render_email', scheduled_for=None,
         p.save()
 
 
-def deploy_pigeons(force=False):
-    process_queue(force=force)
-    process_outbox()
+def deploy_pigeons(force=False, dry_run=False):
+    process_queue(force=force, dry_run=dry_run)
+    if not dry_run:
+        process_outbox()
 
 #TODO get refactor sorted
 send_email = deploy_pigeons
