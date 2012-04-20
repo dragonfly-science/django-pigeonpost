@@ -33,9 +33,9 @@ def process_queue(force=False, dry_run=False):
             mail = render_email(user)
             if dry_run:
                 try:
-                    message = 'created [{0}]\tUser ID: {1} ({2})'.format(mail.message().as_string().replace('\n', '\t'), user.pk, user.email)
+                    message = '{0} CREATED [{0}])'.format(user.email, mail.message().as_string().replace('\n', '\t'))
                 except AttributeError:
-                    message = 'pass\tUser ID: {0} ({1})'.format(user.pk, user.email)
+                    message = '{0} PASS'.format(user.email)
                 dryrun_logger.debug(message)
                 continue
             if mail:
