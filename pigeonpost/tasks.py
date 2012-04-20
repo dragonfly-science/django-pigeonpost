@@ -102,18 +102,3 @@ def kill_pigeons():
         pigeon.to_send = False
         pigeon.save()
 
-def retry(max_retries=3):
-    """
-    retry attempts to resend any emails that have failed.
-    
-    It is designed to be run from a periodicly, e.g. daily via cron.
-    """
-    failures = Outbox.objects.filter(failures__lt=max_retries, succeeded=False)
-    for outbox in failures:
-        try:
-            pickle.load(outbox.message).send()
-            outbox.succeeded = True
-            outbox.sent = datetime.datetime.now()
-        except:
-            outbox.failures +=  1
-        outbox.save()
