@@ -97,7 +97,7 @@ class Post(models.Model):
    def render_email(self, user):
       subject = self.title
       body = self.text
-      return EmailMessage(subject, body to=[user.email])
+      return EmailMessage(subject, body, to=[user.email])
    
    def save(self, *args, **kwargs):
        """
