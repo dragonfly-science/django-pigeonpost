@@ -54,5 +54,5 @@ ROOT_URLCONF = 'pigeonpost.urls'
 
 # Testing settings for django coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = 'htmlcov'
-COVERAGE_TEST_RUNNER = 'django_coverage.coverage_runner.CoverageRunner'
+TEST_RUNNER = 'django_coverage.coverage_runner.CoverageRunner'
 COVERAGE_USE_CACHE = True

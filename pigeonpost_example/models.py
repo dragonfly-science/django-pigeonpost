@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.db import models
 
-from pigeonpost.signals import pigeonpost_queue, pigeonpost_message
+from pigeonpost.signals import pigeonpost_queue, pigeonpost_immediate
 
 # Basic Usage
 class Profile(models.Model):

@@ -10,6 +10,7 @@ from django.core import mail
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.dispatch import receiver
+from django.conf import settings
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost.signals import pigeonpost_queue, pigeonpost_immediate
