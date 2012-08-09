@@ -21,7 +21,7 @@ dryrun_logger = logging.getLogger('pigeonpost.dryrun')
 
 def process_queue(force=False, dry_run=False):
     """
-    Takes messages from queue, adds them to Outbox.
+    Takes pigeons from queue, adds messages to the outbox 
     """
     if force:
         pigeons = Pigeon.objects.filter(to_send=True)
@@ -89,14 +89,12 @@ def add_to_queue(sender, render_email_method='render_email', scheduled_for=None,
         p = Pigeon(source=sender, render_email_method=render_email_method, scheduled_for=scheduled_for)
         p.save()
 
-
 def deploy_pigeons(force=False, dry_run=False):
     process_queue(force=force, dry_run=dry_run)
     if not dry_run:
         process_outbox()
+send_email = deploy_pigeons #Alias
 
-#TODO get refactor sorted
-send_email = deploy_pigeons
 
 def kill_pigeons():
     """Mark all unsent pigeons in the queue as send=False, so that they won't

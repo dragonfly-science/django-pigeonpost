@@ -4,6 +4,7 @@ from django.contrib.contenttypes import generic
 from django.db import models
 
 class Pigeon(models.Model):
+    """A pigeon is a message that will be delivered to a number of users"""
     source_content_type = models.ForeignKey(ContentType)
     source_id = models.PositiveIntegerField()  # Assume the models have an integer primary key
     source = generic.GenericForeignKey('source_content_type', 'source_id')
