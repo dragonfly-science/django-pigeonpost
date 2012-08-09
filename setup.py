@@ -1,6 +1,6 @@
 from distutils.core import setup
 
-setup(name='Distutils',
+setup(name='pigeonpost',
       version='0.1.1',
       description='Python Distribution Utilities',
       author='Edward Abraham',
