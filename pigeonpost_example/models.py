@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.db import models
 
-from pigeonpost.signals import pigeonpost_queue, pigeonpost_immediate
+from pigeonpost.signals import pigeonpost_queue
 
 # Basic Usage
 class Profile(models.Model):
@@ -33,8 +33,12 @@ class ModeratedNews(models.Model):
     body = models.TextField()
     published = models.BooleanField()
     
-    def render_email(self, user):
-        if self.published and (user.get_profile().subscribed_to_news or user.is_staff):
+    def email_news(self, user):
+        if self.published and user.get_profile().subscribed_to_news:
+            return EmailMessage(self.subject, self.body, from_email='anon@example.com', to=[user.email]) 
+    
+    def email_moderators(self, user):
+        if user.is_staff:
             return EmailMessage(self.subject, self.body, from_email='anon@example.com', to=[user.email]) 
             
     def save(self, *args, **kwargs):
@@ -43,8 +47,7 @@ class ModeratedNews(models.Model):
             # sending ModeratedNews to moderators (nearly) immediately,
             # and sending them to users in 6 hours if the ModeratedNews
             # items remain published.
-            pigeonpost_queue.send(sender=self, defer_for=6*60*60) 
-            for user in User.objects.filter(is_staff=True): 
-                pigeonpost_immediate.send(sender=self, message=self.render_email(user=user), user=user)
+            pigeonpost_queue.send(sender=self, render_emal='email_news', defer_for=6*60*60) 
+            pigeonpost_queue.send(sender=self, render_email='email_moderators')
         
         

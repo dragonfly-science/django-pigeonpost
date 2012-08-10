@@ -7,13 +7,14 @@ except ImportError:
     import pickle
 
 from django.core import mail
+from django.core.mail import EmailMessage
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.conf import settings
 
 from pigeonpost.models import Pigeon, Outbox
-from pigeonpost.signals import pigeonpost_queue, pigeonpost_immediate
+from pigeonpost.signals import pigeonpost_queue
 from pigeonpost.signals import pigeonpost_pre_send, pigeonpost_post_send
 
 send_logger = logging.getLogger('pigeonpost.send')
@@ -72,8 +73,7 @@ def process_outbox(max_retries=3, pigeon=None):
         connection.close()
         send_logger.debug("Connection closed to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
 
-@receiver(pigeonpost_immediate)
-def add_immediate_message_to_outbox(sender, message, user, **kwargs):
+def add_to_outbox(message, user):
     Outbox(message=pickle.dumps(message), user=user).save()
 
 @receiver(pigeonpost_queue)

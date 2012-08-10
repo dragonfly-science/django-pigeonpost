@@ -1,7 +1,5 @@
 from django.dispatch import Signal
 
-pigeonpost_immediate = Signal(providing_args=['message', 'user'])
-
 pigeonpost_queue = Signal(providing_args=['render_email_method', 'scheduled_for', 'defer_for'])
 
 pigeonpost_pre_send = Signal()
