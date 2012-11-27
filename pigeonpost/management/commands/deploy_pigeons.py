@@ -8,6 +8,7 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option('-d', '--dry-run',
             default=False,
+            action='store_true',
             dest='dry_run',
             help="Create, but do not send messages that have been queued. Useful to help test a model's render_email method. Logs messages at level debug with the pigeonpost.dryrun logger."
         ),
