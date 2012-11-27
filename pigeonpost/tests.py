@@ -3,6 +3,7 @@ import datetime
 from django.conf import settings
 settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 settings.AUTH_PROFILE_MODULE = 'pigeonpost_example.Profile'
+
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core import mail
@@ -14,8 +15,9 @@ from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_ou
 
 class TestExampleMessage(TestCase):
     """
-    Test that the example message gets added to the queue when it is saved
+    Test that the example message gets added to the queue when it is saved.
     """
+
     def setUp(self):
         self.message = News(subject='Test', body='A test message')
         self.message.save()
@@ -37,7 +39,7 @@ class TestExampleMessage(TestCase):
         """
         When a message is added, the field 'to_send' should be True
         """
-        assert(self.pigeon.to_send == True)
+        self.assertEqual(self.pigeon.to_send, True)
 
     def test_sent_at(self):
         """
@@ -61,7 +63,7 @@ class TestExampleMessage(TestCase):
         self.message.save()
         pigeons = Pigeon.objects.filter(source_content_type=ContentType.objects.get_for_model(self.message),
             source_id=self.message.id)
-        assert(len(pigeons) == 1)
+        self.assertEqual(len(pigeons), 1)
 
     def test_no_message_sent_now(self):
         """
@@ -69,8 +71,8 @@ class TestExampleMessage(TestCase):
         """
         send_email()
         messages = Outbox.objects.all()
-        assert(len(messages) == 0)
-        assert(len(mail.outbox) == 0)
+        self.assertEqual(len(messages), 0)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_message_sent_with_force(self):
         """
@@ -78,8 +80,8 @@ class TestExampleMessage(TestCase):
         """
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 2)
-        assert(len(mail.outbox) == 2)
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(mail.outbox), 2)
     
     def test_kill_pigeons(self):
         """
@@ -88,8 +90,8 @@ class TestExampleMessage(TestCase):
         kill_pigeons()
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 0)
-        assert(len(mail.outbox) == 0)
+        self.assertEqual(len(messages), 0)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_message_not_sent_more_than_once(self):
         """
@@ -98,8 +100,8 @@ class TestExampleMessage(TestCase):
         send_email(force=True)
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 2)
-        assert(len(mail.outbox) == 2)
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(mail.outbox), 2)
 
 class FakeSMTPConnection:
     def send_messages(*msgs, **meh):
@@ -124,8 +126,8 @@ class TestFaultyConnection(TestExampleMessage):
         send_email()
         outboxes = Outbox.objects.all()
         for ob in outboxes:
-            assert(ob.succeeded == False)
-            assert(ob.failures == 1)
+            self.assertEqual(ob.succeeded, False)
+            self.assertEqual(ob.failures, 1)
             assert(ob.pigeon.failures > 0)
         
     def test_message_not_sent_more_than_once(self):
