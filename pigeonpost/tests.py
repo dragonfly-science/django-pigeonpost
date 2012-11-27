@@ -139,24 +139,32 @@ class TestFaultyConnection(TestExampleMessage):
 
 class TestImmediateMessage(TestCase):
     def setUp(self):
-        ModeratedNews(subject='...', body='...', published=True).save()
         andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
         boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
         chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
-        z = User(first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
-        x = User(first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
+        z = User(username='z', first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
+        x = User(username='x', first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
         self.users = set([andrew, boris, chelsea, z, x])
-        self.staff = set([z, x])
-        [user.save() for user in self.users]
-        [Profile(user=user, subscribed_to_news=True).save() for user in self.users]
+        self.staff = [z, x]
+        for user in self.users:
+            user.save()
+            Profile(user=user, subscribed_to_news=True).save()
+        self.users = set(self.users)
+        self.staff = set(self.staff)
+        ModeratedNews(subject='...', body='...', published=True).save()
+
+        process_queue()
  
     def test_outboxes_for_staff(self):
         messages = Outbox.objects.all()
+        self.assertEqual(len(messages),2)
         for m in messages:
             assert m.user in self.staff
 
     def test_no_outboxes_for_nonstaff(self):
         messages = Outbox.objects.all()
         nonstaff = self.users - self.staff
+        self.assertEqual(len(messages),2)
         for m in messages:
             assert m.user not in nonstaff
+

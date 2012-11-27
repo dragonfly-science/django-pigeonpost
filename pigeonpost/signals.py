@@ -5,3 +5,7 @@ pigeonpost_queue = Signal(providing_args=['render_email_method', 'scheduled_for'
 pigeonpost_pre_send = Signal()
 
 pigeonpost_post_send = Signal(providing_args=['successful'])
+
+# Ensure that signal listeners are processed
+import pigeonpost.tasks
+

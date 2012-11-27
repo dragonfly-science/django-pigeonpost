@@ -27,7 +27,7 @@ def process_queue(force=False, dry_run=False):
     if force:
         pigeons = Pigeon.objects.filter(to_send=True)
     else:
-        pigeons = Pigeon.objects.filter(scheduled_for__lt=datetime.datetime.now(), to_send=True)
+        pigeons = Pigeon.objects.filter(scheduled_for__lte=datetime.datetime.now(), to_send=True)
     for pigeon in pigeons:
         render_email = getattr(pigeon.source, pigeon.render_email_method)
         users = User.objects.filter(is_active=True)
@@ -77,14 +77,16 @@ def add_to_outbox(message, user):
     Outbox(message=pickle.dumps(message), user=user).save()
 
 @receiver(pigeonpost_queue)
-def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=0, **kwargs):
-    if not scheduled_for:
+def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=None, **kwargs):
+    # Check that we don't define both scheduled_for and defer_for as that is silly
+    assert not (scheduled_for and defer_for)
+    if defer_for is not None:
+        scheduled_for = datetime.datetime.now() + datetime.timedelta(seconds=defer_for)
+    elif scheduled_for is None:
         scheduled_for = datetime.datetime.now()
-    if defer_for:
-         scheduled_for += datetime.timedelta(seconds=defer_for) 
     try:
         Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
-            source_id=sender.id)
+            source_id=sender.id, render_email_method=render_email_method)
     except Pigeon.DoesNotExist:
         p = Pigeon(source=sender, render_email_method=render_email_method, scheduled_for=scheduled_for)
         p.save()
