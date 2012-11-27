@@ -32,19 +32,19 @@ def process_queue(force=False, dry_run=False):
         render_email = getattr(pigeon.source, pigeon.render_email_method)
         users = User.objects.filter(is_active=True)
         for user in users:
-            mail = render_email(user)
+            email = render_email(user)
             if dry_run:
                 try:
-                    message = '{0} CREATED [{0}])'.format(user.email, mail.message().as_string().replace('\n', '\t'))
+                    message = '{0} CREATED [{0}])'.format(user.email, email.message().as_string().replace('\n', '\t'))
                 except AttributeError:
                     message = '{0} PASS'.format(user.email)
                 dryrun_logger.debug(message)
                 continue
-            if mail:
+            if email:
                 try:
                     Outbox.objects.get(pigeon=pigeon, user=user)
                 except Outbox.DoesNotExist:
-                    Outbox(pigeon=pigeon, user=user, message=pickle.dumps(mail, 0)).save()
+                    Outbox(pigeon=pigeon, user=user, message=pickle.dumps(email, 0)).save()
 
 def process_outbox(max_retries=3, pigeon=None):
     """
@@ -93,12 +93,14 @@ def deploy_pigeons(force=False, dry_run=False):
     process_queue(force=force, dry_run=dry_run)
     if not dry_run:
         process_outbox()
-send_email = deploy_pigeons #Alias
+send_email = deploy_pigeons # Alias
 
 
 def kill_pigeons():
-    """Mark all unsent pigeons in the queue as send=False, so that they won't
-    generate any messages. This is the pigeonpost panic button"""
+    """
+    Mark all unsent pigeons in the queue as send=False, so that they won't
+    generate any messages. This is the pigeonpost panic button.
+    """
     for pigeon in Pigeon.objects.filter(to_send=True):
         pigeon.to_send = False
         pigeon.save()
