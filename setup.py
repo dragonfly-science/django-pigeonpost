@@ -6,5 +6,6 @@ setup(name='pigeonpost',
       author='Edward Abraham',
       author_email='edward@dragonfly.co.nz',
       url='https://github.com/dragonfly-science/django-pigeonpost',
-      packages=['pigeonpost'],
+      packages=['pigeonpost','pigeonpost.management', 'pigeonpost.management.commands'],
+      scripts = ['pigeonpost/bin/deploy_pigeons'],
      )

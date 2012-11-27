@@ -2,19 +2,17 @@
 
 ## About
 
-Pigeonpost is a tool to make it very easy to send emails
-as a model is saved. It is designed for fairly small sites
-that want to avoid the administrative burden of managing an
-entire mailing list. 
+Pigeonpost is a tool to make it very easy to send emails as a model is saved.
+It is designed for fairly small sites that want to avoid the administrative
+burden of managing an entire mailing list. 
 
 ## Overview
 
 To send mail, implementers should
 
-1. Create a model with a `render_page` method
-2. Have that method return a `django.core.mail.EmailMessage`, 
-   according to the implementer's preferred business logic
-   per active user.
+1. Create a model with a `render_email` method
+2. Have that method return a `django.core.mail.EmailMessage`, according to the
+   implementer's preferred business logic per active user.
 3. Establish a periodic crontab (or equivalent) which calls 
    `python manage.py deploy_pigeons`
 
@@ -22,12 +20,10 @@ Moderation is explained within Usage, below.
 
 ## Limitations
 
-* Pigeonpost will not scale gracefully to many hundreds of 
-  active users. The implementation iterates through 
-  every active user in the database. While this is done 
-  asyncronously, 
+* Pigeonpost will not scale gracefully to many hundreds of active users. The
+  implementation iterates through every active user in the database. While this
+  is done asyncronously, 
 * No effort is made to rate limit messages to your SMTP server.
-
 
 ## Installation
 
@@ -35,15 +31,16 @@ Moderation is explained within Usage, below.
 
 The easiest way is to us the `pip` installer
 
-`pip install git+ssh://git@github.com:dragonfly-science/django-pigeonpost.git`
-
+    pip install git+ssh://git@github.com:dragonfly-science/django-pigeonpost.git
 
 ### Setup
 
 1. Add `pigeonpost` to `INSTALLED_APPS` in the settings file of your Django application
-2. Make sure that [django is set up for sending email](https://docs.djangoproject.com/en/dev/topics/email/). This 
-typically requires the `EMAIL_HOST`, `EMAIL_HOST_USER`, and `EMAIL_HOST_PASSWORD` to be set. Other 
-settings include the `EMAIL_PORT` and `EMAIL_USE_TLS` and are explained in the [Django documentation](https://docs.djangoproject.com/en/1.4/ref/settings/#email-backend).
+2. Make sure that [django is set up for sending email](https://docs.djangoproject.com/en/dev/topics/email/).
+   This typically requires the `EMAIL_HOST`, `EMAIL_HOST_USER`, and
+   `EMAIL_HOST_PASSWORD` to be set. Other settings include the `EMAIL_PORT` and
+   `EMAIL_USE_TLS` and are explained in the
+   [Django documentation](https://docs.djangoproject.com/en/1.4/ref/settings/#email-backend).
 
 
 ## Usage
@@ -51,24 +48,23 @@ settings include the `EMAIL_PORT` and `EMAIL_USE_TLS` and are explained in the [
 
 ### Creating mail
 
-In your application, add a method on your models called
-`render_email`. `render_email` takes a `User` and generates
-either an EmailMessage or returns `None`. 
+In your application, add a method on your models called `render_email`.
+`render_email` takes a `User` and generates either an EmailMessage or returns
+`None`. 
 
-When you save an instance of a model that you want to be emailed,
-send a signal to pigeonpost. This signal tells pigeonpost when
-to send the message. The instance is added to the queue, with the
-`render_email` method being called for each user immediately
-before the message is sent.
+When you save an instance of a model that you want to be emailed, send a signal
+to pigeonpost. This signal tells pigeonpost when to send the message. The
+instance is added to the queue, with the `render_email` method being called for
+each user immediately before the message is sent.
 
-A cron job can be used to send any queued messages, using
-standard django email machinery.
+A cron job can be used to send any queued messages, using standard django email
+machinery.
 
-Pigeonpost is suitable for small applications that need to send
-emails to subscribed users. The `render_email` method can contain
-any logic you like to decide whether to send a message derived
-from a model instance to each user. If you are sending thousands
-of emails at once, you should probably not be using pigeons.
+Pigeonpost is suitable for small applications that need to send emails to
+subscribed users. The `render_email` method can contain any logic you like to
+decide whether to send a message derived from a model instance to each user. If
+you are sending thousands of emails at once, you should probably not be using
+pigeons.
 
 When the message is ready to be put on the queue, send a `pigeonpost_message` to
 let pigeonpost know what to do. This signal takes a `scheduled_time` argument
@@ -77,7 +73,7 @@ that allows the message to be deferred.
 ### Moderation
 
 Emails are not sent immediately. This allows a chance for amendments and
-for the messags to be blocked by admins if required. Once that time period
+for the messages to be blocked by admins if required. Once that time period
 passes, messages are sent.
 
 ## Example
@@ -123,7 +119,6 @@ Check for any new messages to send every 10 minutes.
 ```
 */10 * * * * python /path/to/project/manage.py deploy_pigeons
 ```
-
 
 ## Available signals
 

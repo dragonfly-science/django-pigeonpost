@@ -3,6 +3,7 @@ import datetime
 from django.conf import settings
 settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 settings.AUTH_PROFILE_MODULE = 'pigeonpost_example.Profile'
+
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core import mail
@@ -14,8 +15,9 @@ from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_ou
 
 class TestExampleMessage(TestCase):
     """
-    Test that the example message gets added to the queue when it is saved
+    Test that the example message gets added to the queue when it is saved.
     """
+
     def setUp(self):
         self.message = News(subject='Test', body='A test message')
         self.message.save()
@@ -37,7 +39,7 @@ class TestExampleMessage(TestCase):
         """
         When a message is added, the field 'to_send' should be True
         """
-        assert(self.pigeon.to_send == True)
+        self.assertEqual(self.pigeon.to_send, True)
 
     def test_sent_at(self):
         """
@@ -61,7 +63,7 @@ class TestExampleMessage(TestCase):
         self.message.save()
         pigeons = Pigeon.objects.filter(source_content_type=ContentType.objects.get_for_model(self.message),
             source_id=self.message.id)
-        assert(len(pigeons) == 1)
+        self.assertEqual(len(pigeons), 1)
 
     def test_no_message_sent_now(self):
         """
@@ -69,8 +71,8 @@ class TestExampleMessage(TestCase):
         """
         send_email()
         messages = Outbox.objects.all()
-        assert(len(messages) == 0)
-        assert(len(mail.outbox) == 0)
+        self.assertEqual(len(messages), 0)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_message_sent_with_force(self):
         """
@@ -78,8 +80,8 @@ class TestExampleMessage(TestCase):
         """
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 2)
-        assert(len(mail.outbox) == 2)
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(mail.outbox), 2)
     
     def test_kill_pigeons(self):
         """
@@ -88,8 +90,8 @@ class TestExampleMessage(TestCase):
         kill_pigeons()
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 0)
-        assert(len(mail.outbox) == 0)
+        self.assertEqual(len(messages), 0)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_message_not_sent_more_than_once(self):
         """
@@ -98,8 +100,8 @@ class TestExampleMessage(TestCase):
         send_email(force=True)
         send_email(force=True)
         messages = Outbox.objects.all()
-        assert(len(messages) == 2)
-        assert(len(mail.outbox) == 2)
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(mail.outbox), 2)
 
 class FakeSMTPConnection:
     def send_messages(*msgs, **meh):
@@ -124,8 +126,8 @@ class TestFaultyConnection(TestExampleMessage):
         send_email()
         outboxes = Outbox.objects.all()
         for ob in outboxes:
-            assert(ob.succeeded == False)
-            assert(ob.failures == 1)
+            self.assertEqual(ob.succeeded, False)
+            self.assertEqual(ob.failures, 1)
             assert(ob.pigeon.failures > 0)
         
     def test_message_not_sent_more_than_once(self):
@@ -137,24 +139,32 @@ class TestFaultyConnection(TestExampleMessage):
 
 class TestImmediateMessage(TestCase):
     def setUp(self):
-        ModeratedNews(subject='...', body='...', published=True).save()
         andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
         boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
         chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
-        z = User(first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
-        x = User(first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
+        z = User(username='z', first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
+        x = User(username='x', first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
         self.users = set([andrew, boris, chelsea, z, x])
-        self.staff = set([z, x])
-        [user.save() for user in self.users]
-        [Profile(user=user, subscribed_to_news=True).save() for user in self.users]
+        self.staff = [z, x]
+        for user in self.users:
+            user.save()
+            Profile(user=user, subscribed_to_news=True).save()
+        self.users = set(self.users)
+        self.staff = set(self.staff)
+        ModeratedNews(subject='...', body='...', published=True).save()
+
+        process_queue()
  
     def test_outboxes_for_staff(self):
         messages = Outbox.objects.all()
+        self.assertEqual(len(messages),2)
         for m in messages:
             assert m.user in self.staff
 
     def test_no_outboxes_for_nonstaff(self):
         messages = Outbox.objects.all()
         nonstaff = self.users - self.staff
+        self.assertEqual(len(messages),2)
         for m in messages:
             assert m.user not in nonstaff
+

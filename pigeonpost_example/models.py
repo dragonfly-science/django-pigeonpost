@@ -4,7 +4,6 @@ from django.db import models
 
 from pigeonpost.signals import pigeonpost_queue
 
-# Basic Usage
 class Profile(models.Model):
     user = models.ForeignKey(User, unique=True)
     subscribed_to_news = models.BooleanField()
@@ -47,7 +46,7 @@ class ModeratedNews(models.Model):
             # sending ModeratedNews to moderators (nearly) immediately,
             # and sending them to users in 6 hours if the ModeratedNews
             # items remain published.
-            pigeonpost_queue.send(sender=self, render_emal='email_news', defer_for=6*60*60) 
-            pigeonpost_queue.send(sender=self, render_email='email_moderators')
+            pigeonpost_queue.send(sender=self, render_email_method='email_news', defer_for=6*60*60) 
+            pigeonpost_queue.send(sender=self, render_email_method='email_moderators')
         
         
