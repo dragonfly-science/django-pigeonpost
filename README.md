@@ -2,27 +2,30 @@
 
 ## About
 
-Pigeonpost is a tool to make it very easy to send emails as a model is saved.
-It is designed for fairly small sites that want to avoid the administrative
-burden of managing an entire mailing list. 
+Pigeonpost is a tool to make it simple to queue and send emails as a model is saved.
 
 ## Overview
 
 To send mail, implementers should
 
 1. Create a model with a `render_email` method
-2. Have that method return a `django.core.mail.EmailMessage`, according to the
+2. Have that method return a `django.core.mail.EmailMessage` or None, according to the
    implementer's preferred business logic per active user.
 3. Establish a periodic crontab (or equivalent) which calls 
    `python manage.py deploy_pigeons`
 
 Moderation is explained within Usage, below.
 
+## Release Notes
+
+### 0.1.2
+
+This version supports targetted delivery and allows multiple pigeons per model
+instance. To upgrade from 0.1.1, the appropriate sql patches in
+pigeonpost/sql-migrations should be applied.
+
 ## Limitations
 
-* Pigeonpost will not scale gracefully to many hundreds of active users. The
-  implementation iterates through every active user in the database. While this
-  is done asyncronously, 
 * No effort is made to rate limit messages to your SMTP server.
 
 ## Installation
@@ -45,36 +48,111 @@ The easiest way is to us the `pip` installer
 
 ## Usage
 
-
 ### Creating mail
 
 In your application, add a method on your models called `render_email`.
 `render_email` takes a `User` and generates either an EmailMessage or returns
-`None`. 
+`None`. If `None` is returned, no email is sent to that `User`.
 
-When you save an instance of a model that you want to be emailed, send a signal
-to pigeonpost. This signal tells pigeonpost when to send the message. The
-instance is added to the queue, with the `render_email` method being called for
-each user immediately before the message is sent.
+When you save an instance of a model that you want to be emailed, just send a signal
+to pigeonpost_queue:
 
-A cron job can be used to send any queued messages, using standard django email
-machinery.
+```python
+    def save(self):
+        ...
+        pigeonpost_queue.send(sender=self,...)
+```
 
-Pigeonpost is suitable for small applications that need to send emails to
-subscribed users. The `render_email` method can contain any logic you like to
-decide whether to send a message derived from a model instance to each user. If
-you are sending thousands of emails at once, you should probably not be using
-pigeons.
+This signal tells pigeonpost when to send the message. The instance is added to
+the queue, with the `render_email` method being called for each user
+immediately before the message is sent.
+
+A cron job can be used to send any queued messages, which will use the standard
+django email machinery:
+
+    python manage.py deploy_pigeons
 
 When the message is ready to be put on the queue, send a `pigeonpost_message` to
 let pigeonpost know what to do. This signal takes a `scheduled_time` argument
 that allows the message to be deferred.
+
+### Directed Pigeons 
+
+Pigeonpost originally would call the `render_email` method for **every** user.
+This is still the default behaviour but you can now target your pigeons to avoid
+this inefficient behaviour.
+
+To target the pigeon you pass either `send_to` or
+`send_to_method` to the pigeonpost_queue signal along with the normal options.
+
+`send_to` is good for sending to a single specific user:
+
+```python
+    u = User.objects.get(username='bob')
+    pigeonpost_queue.send(sender=self, send_to=u)
+```
+
+it will complete avoid the loop and only call `render_email` with the `send_to`
+user. It will still only send the email if `render_email` returns an
+`EmailMessage` and not `None`.
+
+`send_to_method` is good if you have some logic about which users you want to
+send an email to which is faster (or conceptually simpler) than working out on
+a per-user basis. It should return an iterable of Users.
+
+```python
+    def get_subscribers(self):
+        # assuming a ManyToManyField called subscribers.
+        return subscriptions.all()
+    u = User.objects.get(username='bob')
+    pigeonpost_queue.send(sender=self, send_to=u)
+```
+
+Do not define both `send_to` and `send_to_method`. The resulting behaviour is
+not guaranteed and your pigeons may get confused.
+
+### Multiple emails
+
+You can change the `render_email` method by passing `render_email_method` as
+an argument to the pigeonpost_queue. This allows you to use different logic and
+delays before sending email.
+
+E.g. you could send specific updates to an admin as well as use a general
+render_email method:
+
+```python
+    u = User.objects.get(username='bob')
+    admin = User.objects.get(username='admin')
+    p = u.profile # Has a render_email method and a sysop_email method
+    ten_minutes = 10*60
+    pigeonpost_queue.send(sender=p, defer_for=10*60) # send in 10 minutes
+    pigeonpost_queue.send(sender=p, send_to=admin, render_email_method='sysop_email', defer_for=ten_minutes)
+```
 
 ### Moderation
 
 Emails are not sent immediately. This allows a chance for amendments and
 for the messages to be blocked by admins if required. Once that time period
 passes, messages are sent.
+
+In addition, it allows for multiple changes to a model to be cached. If you
+submit the same model instance, with the same parameters (apart from when to send
+the email), it will update the scheduled time for sending the existing pigeon.
+
+For example, the below code sends the same pigeon twice:
+
+```python
+    u = User.objects.get(username='bob')
+    p = u.profile # Has a render_email method
+    ten_minutes = 10*60
+    pigeonpost_queue.send(sender=p, defer_for=ten_minutes) # send in 10 minutes
+    from time import sleep
+    sleep(ten_minutes/5)
+    pigeonpost_queue.send(sender=p, defer_for=10*60) # send in 10 minutes
+```
+
+Due to the sleep function, and the pigeon being resubmitted, the actual email
+won't be scheduled until 15 minutes after this code begins execution.
 
 ## Example
 
@@ -130,7 +208,6 @@ Pigeonpost provides several signals to support advanced functionality:
    A message has been created, to be added to the queue.
 * `pigeonpost_pre_send`  
 * `pigeonpost_post_send`
-
 
 ## Other mailers
 

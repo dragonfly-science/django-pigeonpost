@@ -12,6 +12,30 @@ from django.test import TestCase
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost_example.models import ModeratedNews, News, Profile
 from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_outbox
+from pigeonpost.signals import pigeonpost_queue
+
+def create_fixtures():
+    # Set up test users
+    andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
+    boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
+    chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
+    users = [andrew, boris, chelsea]
+    for user in users:
+        user.save()
+    p1 = Profile(user=andrew, subscribed_to_news=True)
+    p2 = Profile(user=boris, subscribed_to_news=True)
+    p3 = Profile(user=chelsea, subscribed_to_news=False)
+    for p in [p1, p2, p3]:
+        p.save()
+
+    # Setup test pigeon/message
+    message = News(subject='Test', body='A test message')
+    message.save()
+    pigeon = Pigeon.objects.get(
+        source_content_type=ContentType.objects.get_for_model(message),
+        source_id=message.id)
+    return users, message, pigeon
+
 
 class TestExampleMessage(TestCase):
     """
@@ -19,21 +43,7 @@ class TestExampleMessage(TestCase):
     """
 
     def setUp(self):
-        self.message = News(subject='Test', body='A test message')
-        self.message.save()
-        self.pigeon = Pigeon.objects.get(
-            source_content_type=ContentType.objects.get_for_model(self.message),
-            source_id=self.message.id)
-        self.pigeon.save()
-        andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
-        boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
-        chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
-        self.users = [andrew, boris, chelsea]
-        [user.save() for user in self.users]
-        p1 = Profile(user=andrew, subscribed_to_news=True)
-        p2 = Profile(user=boris, subscribed_to_news=True)
-        p3 = Profile(user=chelsea, subscribed_to_news=False)
-        [p.save() for p in [p1, p2, p3]]
+        self.users, self.message, self.pigeon = create_fixtures()
         
     def test_to_send(self):
         """ When a message is added, the field 'to_send' should be True """
@@ -87,6 +97,25 @@ class TestExampleMessage(TestCase):
         self.assertEqual(len(messages), 2)
         self.assertEqual(len(mail.outbox), 2)
 
+    def test_updated_scheduled_for(self):
+        """ Sending the same pigeon details just updates scheduled_for """
+
+        # First try using defer_for
+        pigeonpost_queue.send(sender=self.message, defer_for=10) # 10 seconds
+        pigeon = Pigeon.objects.get(
+            source_content_type=ContentType.objects.get_for_model(self.message),
+            source_id=self.message.id)
+        delta = pigeon.scheduled_for - datetime.datetime.now()
+        self.assertTrue(delta.seconds<=10)
+
+        # now try with scheduled_for
+        now = datetime.datetime.now()
+        pigeonpost_queue.send(sender=self.message, scheduled_for=now)
+        pigeon = Pigeon.objects.get(
+            source_content_type=ContentType.objects.get_for_model(self.message),
+            source_id=self.message.id)
+        self.assertEqual(pigeon.scheduled_for, now)
+
 
 class FakeSMTPConnection:
     def send_messages(*msgs, **meh):
@@ -95,9 +124,9 @@ class FakeSMTPConnection:
     def close(*aa, **kwaa):
         return True
 
-class TestFaultyConnection(TestExampleMessage):
+class TestFaultyConnection(TestCase):
     def setUp(self):
-        super(TestFaultyConnection, self).setUp()
+        self.users, self.message, self.pigeon = create_fixtures()
         self._get_conn = mail.get_connection
         mail.get_connection = lambda *aa, **kw: FakeSMTPConnection()
     

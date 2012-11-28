@@ -78,16 +78,21 @@ def add_to_outbox(message, user):
 
 @receiver(pigeonpost_queue)
 def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=None, **kwargs):
-    # Check that we don't define both scheduled_for and defer_for as that is silly
+    # Check that we don't define both scheduled_for and defer_for at the same time. That is silly.
     assert not (scheduled_for and defer_for)
+    # Work out the scheduled delivery time if necessary
     if defer_for is not None:
         scheduled_for = datetime.datetime.now() + datetime.timedelta(seconds=defer_for)
     elif scheduled_for is None:
         scheduled_for = datetime.datetime.now()
     try:
-        Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
+        p = Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
             source_id=sender.id, render_email_method=render_email_method)
+        # Update with whatever the new scheduled time is
+        p.scheduled_for = scheduled_for
+        p.save()
     except Pigeon.DoesNotExist:
+        # Create a new pigeon
         p = Pigeon(source=sender, render_email_method=render_email_method, scheduled_for=scheduled_for)
         p.save()
 
