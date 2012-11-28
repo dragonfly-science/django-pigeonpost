@@ -14,28 +14,31 @@ from pigeonpost_example.models import ModeratedNews, News, Profile
 from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_outbox
 from pigeonpost.signals import pigeonpost_queue
 
-def create_fixtures():
+def create_fixtures(create_message=True):
     # Set up test users
     andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
     boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
     chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
-    users = [andrew, boris, chelsea]
+    z = User(username='z', first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
+    x = User(username='x', first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
+    users = [andrew, boris, chelsea, z, x]
+    staff = [z, x]
     for user in users:
         user.save()
-    p1 = Profile(user=andrew, subscribed_to_news=True)
-    p2 = Profile(user=boris, subscribed_to_news=True)
-    p3 = Profile(user=chelsea, subscribed_to_news=False)
-    for p in [p1, p2, p3]:
-        p.save()
+        if user.username in ['a', 'b']:
+            Profile(user=user, subscribed_to_news=True).save()
+        else:
+            Profile(user=user, subscribed_to_news=False).save()
 
-    # Setup test pigeon/message
-    message = News(subject='Test', body='A test message')
-    message.save()
-    pigeon = Pigeon.objects.get(
-        source_content_type=ContentType.objects.get_for_model(message),
-        source_id=message.id)
-    return users, message, pigeon
-
+    if create_message:
+        # Setup test pigeon/message
+        message = News(subject='Test', body='A test message')
+        message.save()
+        pigeon = Pigeon.objects.get(
+            source_content_type=ContentType.objects.get_for_model(message),
+            source_id=message.id)
+        return users, staff, message, pigeon
+    return users, staff, None, None
 
 class TestExampleMessage(TestCase):
     """
@@ -43,7 +46,7 @@ class TestExampleMessage(TestCase):
     """
 
     def setUp(self):
-        self.users, self.message, self.pigeon = create_fixtures()
+        self.users, self.staff, self.message, self.pigeon = create_fixtures()
         
     def test_to_send(self):
         """ When a message is added, the field 'to_send' should be True """
@@ -126,7 +129,7 @@ class FakeSMTPConnection:
 
 class TestFaultyConnection(TestCase):
     def setUp(self):
-        self.users, self.message, self.pigeon = create_fixtures()
+        self.users, self.staff, self.message, self.pigeon = create_fixtures()
         self._get_conn = mail.get_connection
         mail.get_connection = lambda *aa, **kw: FakeSMTPConnection()
     
@@ -142,29 +145,11 @@ class TestFaultyConnection(TestCase):
             self.assertEqual(ob.failures, 1)
             assert(ob.pigeon.failures > 0)
         
-    def test_message_not_sent_more_than_once(self):
-        pass
-
-    def test_message_sent_with_force(self):
-        pass
-        
 
 class TestImmediateMessage(TestCase):
     def setUp(self):
-        andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
-        boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
-        chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
-        z = User(username='z', first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
-        x = User(username='x', first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
-        self.users = [andrew, boris, chelsea, z, x]
-        self.staff = [z, x]
-        for user in self.users:
-            user.save()
-            Profile(user=user, subscribed_to_news=True).save()
-        self.users = set(self.users)
-        self.staff = set(self.staff)
+        self.users, self.staff, _, _ = create_fixtures(create_message=False)
         ModeratedNews(subject='...', body='...', published=True).save()
-
         process_queue()
  
     def test_outboxes_for_staff(self):
@@ -175,8 +160,30 @@ class TestImmediateMessage(TestCase):
 
     def test_no_outboxes_for_nonstaff(self):
         messages = Outbox.objects.all()
-        nonstaff = self.users - self.staff
+        nonstaff = set(self.users) - set(self.staff)
         self.assertEqual(len(messages),2)
         for m in messages:
             assert m.user not in nonstaff
+
+    def test_multiple_pigeons_for(self):
+        """ Multiple pigeons per model instance """
+
+
+class TestTargettedPigeons(TestCase):
+
+    def setUp(self):
+        self.users, self.staff, _, _ = create_fixtures(create_message=False)
+        ModeratedNews(subject='...', body='...', published=True).save()
+        process_queue()
+ 
+    def test_send_to(self):
+        """ Test that we can send a pigeon to a specific user """
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),2)
+        for m in messages:
+            assert m.user in self.staff
+
+    def test_send_to_method(self):
+        """ Test that we can send a pigeon to a specific user """
+
 
