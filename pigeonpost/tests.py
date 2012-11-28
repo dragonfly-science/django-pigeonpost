@@ -36,28 +36,20 @@ class TestExampleMessage(TestCase):
         [p.save() for p in [p1, p2, p3]]
         
     def test_to_send(self):
-        """
-        When a message is added, the field 'to_send' should be True
-        """
+        """ When a message is added, the field 'to_send' should be True """
         self.assertEqual(self.pigeon.to_send, True)
 
     def test_sent_at(self):
-        """
-        When a message is added, the field 'sent_at' should be None
-        """
+        """ When a message is added, the field 'sent_at' should be None """
         assert(self.pigeon.sent_at is None)
 
     def test_scheduled_for(self):
-        """
-        The example Message has a deferred sending time of 6 hours
-        """
+        """ The example Message has a deferred sending time of 6 hours """
         assert((self.pigeon.scheduled_for - datetime.datetime.now()).seconds > 5*60*60) 
         assert((self.pigeon.scheduled_for - datetime.datetime.now()).seconds < 7*60*60) 
     
     def test_save_many_times(self):
-        """
-        When a message is saved more than once, only one copy should go on the queue
-        """
+        """ When a message is saved more than once, only one copy should go on the queue """
         self.message.save()
         self.message.save()
         self.message.save()
@@ -66,27 +58,21 @@ class TestExampleMessage(TestCase):
         self.assertEqual(len(pigeons), 1)
 
     def test_no_message_sent_now(self):
-        """
-        As the message is deferred, it won't be sent when send_email is run
-        """
+        """ As the message is deferred, it won't be sent when send_email is run """
         send_email()
         messages = Outbox.objects.all()
         self.assertEqual(len(messages), 0)
         self.assertEqual(len(mail.outbox), 0)
 
     def test_message_sent_with_force(self):
-        """
-        Force sending of all unsent pigeons
-        """
+        """ Force sending of all unsent pigeons """
         send_email(force=True)
         messages = Outbox.objects.all()
         self.assertEqual(len(messages), 2)
         self.assertEqual(len(mail.outbox), 2)
     
     def test_kill_pigeons(self):
-        """
-        Kill pigeons stops any unsent pigeons from delivering messages
-        """
+        """ Kill pigeons stops any unsent pigeons from delivering messages """
         kill_pigeons()
         send_email(force=True)
         messages = Outbox.objects.all()
@@ -94,14 +80,13 @@ class TestExampleMessage(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_message_not_sent_more_than_once(self):
-        """
-        Force sending of all unsent pigeons
-        """
+        """ Force sending of all unsent pigeons """
         send_email(force=True)
         send_email(force=True)
         messages = Outbox.objects.all()
         self.assertEqual(len(messages), 2)
         self.assertEqual(len(mail.outbox), 2)
+
 
 class FakeSMTPConnection:
     def send_messages(*msgs, **meh):
@@ -120,9 +105,7 @@ class TestFaultyConnection(TestExampleMessage):
         mail.get_connection = self._get_conn
 
     def test_faulty_connection(self):
-        """
-        Check that we are noting failures.
-        """
+        """ Check that we are noting failures. """
         send_email()
         outboxes = Outbox.objects.all()
         for ob in outboxes:
