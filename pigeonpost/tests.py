@@ -144,7 +144,7 @@ class TestImmediateMessage(TestCase):
         chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
         z = User(username='z', first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
         x = User(username='x', first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
-        self.users = set([andrew, boris, chelsea, z, x])
+        self.users = [andrew, boris, chelsea, z, x]
         self.staff = [z, x]
         for user in self.users:
             user.save()
