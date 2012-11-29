@@ -7,7 +7,6 @@ except ImportError:
     import pickle
 
 from django.core import mail
-from django.core.mail import EmailMessage
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.dispatch import receiver
@@ -29,8 +28,17 @@ def process_queue(force=False, dry_run=False):
     else:
         pigeons = Pigeon.objects.filter(scheduled_for__lte=datetime.datetime.now(), to_send=True)
     for pigeon in pigeons:
+        # Get method for rendering email for each user
         render_email = getattr(pigeon.source, pigeon.render_email_method)
-        users = User.objects.filter(is_active=True)
+        # Get a list of users to potentially generated emails for
+        if pigeon.send_to:
+            users = [pigeon.send_to]
+        elif pigeon.send_to_method:
+            get_user_method = getattr(pigeon.source, pigeon.send_to_method)
+            users = get_user_method()
+        else:
+            users = User.objects.filter(is_active=True)
+        # Iterate through the users and try adding messages to the Outbox model
         for user in users:
             email = render_email(user)
             if dry_run:
@@ -45,6 +53,9 @@ def process_queue(force=False, dry_run=False):
                     Outbox.objects.get(pigeon=pigeon, user=user)
                 except Outbox.DoesNotExist:
                     Outbox(pigeon=pigeon, user=user, message=pickle.dumps(email, 0)).save()
+            pigeon.to_send = False
+            pigeon.sent_at = datetime.datetime.now()
+            pigeon.save()
 
 def process_outbox(max_retries=3, pigeon=None):
     """
@@ -77,18 +88,29 @@ def add_to_outbox(message, user):
     Outbox(message=pickle.dumps(message), user=user).save()
 
 @receiver(pigeonpost_queue)
-def add_to_queue(sender, render_email_method='render_email', scheduled_for=None, defer_for=None, **kwargs):
-    # Check that we don't define both scheduled_for and defer_for as that is silly
+def add_to_queue(sender, render_email_method='render_email', send_to=None, send_to_method=None, scheduled_for=None, defer_for=None, **kwargs):
+    # Check that we don't define both scheduled_for and defer_for at the same time. That is silly.
     assert not (scheduled_for and defer_for)
+    # Work out the scheduled delivery time if necessary
     if defer_for is not None:
         scheduled_for = datetime.datetime.now() + datetime.timedelta(seconds=defer_for)
     elif scheduled_for is None:
         scheduled_for = datetime.datetime.now()
     try:
-        Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
-            source_id=sender.id, render_email_method=render_email_method)
+        p = Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
+                source_id=sender.id,
+                render_email_method=render_email_method,
+                send_to=send_to,
+                send_to_method=send_to_method)
+        # Update with whatever the new scheduled time is
+        p.scheduled_for = scheduled_for
+        p.save()
     except Pigeon.DoesNotExist:
-        p = Pigeon(source=sender, render_email_method=render_email_method, scheduled_for=scheduled_for)
+        # Create a new pigeon
+        p = Pigeon(source=sender, render_email_method=render_email_method,
+                scheduled_for=scheduled_for,
+                send_to=send_to,
+                send_to_method=send_to_method)
         p.save()
 
 def deploy_pigeons(force=False, dry_run=False):
