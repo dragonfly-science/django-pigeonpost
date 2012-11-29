@@ -49,4 +49,15 @@ class ModeratedNews(models.Model):
             pigeonpost_queue.send(sender=self, render_email_method='email_news', defer_for=6*60*60) 
             pigeonpost_queue.send(sender=self, render_email_method='email_moderators')
         
-        
+
+class BobsNews(models.Model):
+    """ News... news only for people called Bob, and no one else! """
+    subject = models.TextField()
+    body = models.TextField()
+
+    def email_news(self, user):
+        assert user.first_name.lower() == 'bob'
+        return EmailMessage(self.subject, self.body, from_email='anon@example.com', to=[user.email]) 
+
+    def get_everyone_called_bob(self):
+        return User.objects.filter(first_name__iexact='bob')

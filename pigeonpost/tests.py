@@ -10,18 +10,18 @@ from django.core import mail
 from django.test import TestCase
 
 from pigeonpost.models import Pigeon, Outbox
-from pigeonpost_example.models import ModeratedNews, News, Profile
+from pigeonpost_example.models import ModeratedNews, News, Profile, BobsNews
 from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_outbox
 from pigeonpost.signals import pigeonpost_queue
 
 def create_fixtures(create_message=True):
     # Set up test users
-    andrew  = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
-    boris   = User(username='b', first_name="Boris", last_name="Test", email="b@example.com")
+    andrew = User(username='a', first_name="Andrew", last_name="Test", email="a@example.com")
+    bob = User(username='b', first_name="Bob", last_name="Test", email="b@example.com")
     chelsea = User(username='c', first_name="Chelsea", last_name="Test", email="c@foo.org")
     z = User(username='z', first_name="Zach", last_name="Test", email="z@example.com", is_staff=True)
     x = User(username='x', first_name="Xray", last_name="Test", email="x@example.com", is_staff=True)
-    users = [andrew, boris, chelsea, z, x]
+    users = [andrew, bob, chelsea, z, x]
     staff = [z, x]
     for user in users:
         user.save()
@@ -47,14 +47,24 @@ class TestExampleMessage(TestCase):
 
     def setUp(self):
         self.users, self.staff, self.message, self.pigeon = create_fixtures()
+
+    def _send_now(self):
+        pigeonpost_queue.send(sender=self.message) # send now
+        process_queue()
+        self.pigeon = Pigeon.objects.get(id=self.pigeon.id)
         
     def test_to_send(self):
         """ When a message is added, the field 'to_send' should be True """
         self.assertEqual(self.pigeon.to_send, True)
+        self._send_now()
+        self.assertEqual(self.pigeon.to_send, False)
 
     def test_sent_at(self):
         """ When a message is added, the field 'sent_at' should be None """
         assert(self.pigeon.sent_at is None)
+        self._send_now()
+        self.assertTrue(self.pigeon.sent_at) # check it is not None before comparing
+        self.assertTrue(self.pigeon.sent_at <= datetime.datetime.now())
 
     def test_scheduled_for(self):
         """ The example Message has a deferred sending time of 6 hours """
@@ -165,25 +175,32 @@ class TestImmediateMessage(TestCase):
         for m in messages:
             assert m.user not in nonstaff
 
-    def test_multiple_pigeons_for(self):
-        """ Multiple pigeons per model instance """
-
 
 class TestTargettedPigeons(TestCase):
 
     def setUp(self):
         self.users, self.staff, _, _ = create_fixtures(create_message=False)
-        ModeratedNews(subject='...', body='...', published=True).save()
-        process_queue()
+        self.news = BobsNews(subject='Propaganda daily', body='Bob is a great guy.')
+        self.news.save()
+        self.bob = User.objects.get(first_name__iexact='bob')
  
     def test_send_to(self):
         """ Test that we can send a pigeon to a specific user """
+        pigeonpost_queue.send(sender=self.news, render_email_method='email_news',
+                send_to=self.bob) 
+        process_queue()
+
         messages = Outbox.objects.all()
-        self.assertEqual(len(messages),2)
-        for m in messages:
-            assert m.user in self.staff
+        self.assertEqual(len(messages),1)
+        self.assertEqual(messages[0].user, self.bob)
 
     def test_send_to_method(self):
         """ Test that we can send a pigeon to a specific user """
+        pigeonpost_queue.send(sender=self.news, render_email_method='email_news',
+                send_to_method='get_everyone_called_bob') 
+        process_queue()
 
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),1)
+        self.assertEqual(messages[0].user, self.bob)
 
