@@ -16,14 +16,6 @@ To send mail, implementers should
 
 Moderation is explained within Usage, below.
 
-## Release Notes
-
-### 0.1.2
-
-This version supports targetted delivery and allows multiple pigeons per model
-instance. To upgrade from 0.1.1, the appropriate sql patches in
-pigeonpost/sql-migrations should be applied.
-
 ## Limitations
 
 * No effort is made to rate limit messages to your SMTP server.
@@ -212,6 +204,19 @@ Pigeonpost provides several signals to support advanced functionality:
 ## Other mailers
 
 Maybe you should use this [other django mailing solution by James Tauber](https://github.com/jtauber/django-mailer/).
+
+## Release Notes
+
+### 0.1.3
+
+Minor changes to improve the admin display and slight logic change to updating
+pigeons that have already been sent.
+
+### 0.1.2
+
+This version supports targetted delivery and allows multiple pigeons per model
+instance. To upgrade from 0.1.1, the appropriate sql patches in
+pigeonpost/sql-migrations should be applied.
 
 
 ## The Kereru

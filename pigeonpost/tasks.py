@@ -11,6 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.conf import settings
+from django.core.mail import EmailMessage
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost.signals import pigeonpost_queue
@@ -48,7 +49,7 @@ def process_queue(force=False, dry_run=False):
                     message = '{0} PASS'.format(user.email)
                 dryrun_logger.debug(message)
                 continue
-            if email:
+            if email and isinstance(email, EmailMessage):
                 try:
                     Outbox.objects.get(pigeon=pigeon, user=user)
                 except Outbox.DoesNotExist:
@@ -68,6 +69,7 @@ def process_outbox(max_retries=3, pigeon=None):
         connection = mail.get_connection()
         send_logger.debug("Connection made to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
+            send_logger.debug("A message to deliver!")
             email = pickle.loads(msg.message.encode('utf-8'))
             pigeonpost_pre_send.send(email)
             successful = connection.send_messages([email])
@@ -75,6 +77,8 @@ def process_outbox(max_retries=3, pigeon=None):
             pigeonpost_post_send.send(email, successful=successful)
             if not successful:
                 msg.failures += 1
+            else:
+                send_logger.debug("Message sent!")
             msg.succeeded = successful
             msg.sent_at = datetime.datetime.now()
             msg.save()
@@ -102,9 +106,11 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
                 render_email_method=render_email_method,
                 send_to=send_to,
                 send_to_method=send_to_method)
-        # Update with whatever the new scheduled time is
-        p.scheduled_for = scheduled_for
-        p.save()
+        if p.to_send:
+            # If the pigeon has not been sent yet, or to_send has been set to True,
+            # update the pigeon with whatever the new scheduled time is
+            p.scheduled_for = scheduled_for
+            p.save()
     except Pigeon.DoesNotExist:
         # Create a new pigeon
         p = Pigeon(source=sender, render_email_method=render_email_method,
