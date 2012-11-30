@@ -67,7 +67,9 @@ def process_outbox(max_retries=3, pigeon=None):
         query_params['pigeon'] = pigeon
     try:
         connection = mail.get_connection()
-        send_logger.debug("Connection made to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
+        if settings.EMAIL_HOST:
+            send_logger.debug("Connection made to %s:%s ".format(
+                settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
             send_logger.debug("A message to deliver!")
             email = pickle.loads(msg.message.encode('utf-8'))
@@ -86,7 +88,9 @@ def process_outbox(max_retries=3, pigeon=None):
         send_logger.exception(err.args[0])
     finally:
         connection.close()
-        send_logger.debug("Connection closed to %s:%s ".format(settings.EMAIL_HOST, settings.EMAIL_PORT))
+        if settings.EMAIL_HOST:
+            send_logger.debug("Connection closed to %s:%s ".format(
+                settings.EMAIL_HOST, settings.EMAIL_PORT))
 
 def add_to_outbox(message, user):
     Outbox(message=pickle.dumps(message), user=user).save()
