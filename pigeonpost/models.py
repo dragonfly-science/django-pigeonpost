@@ -19,7 +19,7 @@ class Pigeon(models.Model):
             help_text="Whether this object should be sent (some time in the future).")
     sent_at = models.DateTimeField(null=True, blank=True,
             help_text="Indicates the time that this job was sent.")
-    send_to = models.ForeignKey(User, null=True,
+    send_to = models.ForeignKey(User, null=True, blank=True,
             help_text="If specified, we call only call render_email_method for this user.")
     send_to_method = models.TextField(null=True, blank=True,
             help_text="If specified, we call send_to_method to get the users that will be called with render_email_method.")
