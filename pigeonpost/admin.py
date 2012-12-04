@@ -5,18 +5,30 @@ from django.contrib.admin import ModelAdmin
 from pigeonpost.models import Pigeon, Outbox
 
 class PigeonAdmin(ModelAdmin):
-    list_display = ('id', 'source', 'source_edit', 'scheduled_for',
-            'render_email_method', 'send_to', 'send_to_method', 'to_send', 'sent_at')
+    list_display = ('id', 'source_content_type', 'source_edit', 'scheduled_for',
+            'render_email_method', '_send_to', '_send_to_method', 'to_send', 'sent_at')
     list_filter = ('to_send',)
 
     related_lookup_fields = {
         'generic': [['source_content_type', 'source_id'], ],
     }
 
+    def _send_to(self, obj):
+        if obj.send_to:
+            return obj.send_to
+        return ''
+    _send_to.short_description = 'send_to'
+
+    def _send_to_method(self, obj):
+        if obj.send_to_method:
+            return obj.send_to_method
+        return ''
+    _send_to.short_description = 'send_to_method'
+
     def source_edit(self, obj):
         ct = obj.source_content_type
         url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.source_id,))
-        return '<a href="%s">%s</a>' % (url,obj.source_id,)
+        return '<a href="%s">%s</a>' % (url,obj.source,)
     source_edit.allow_tags = True
 
 admin.site.register(Pigeon, PigeonAdmin)
