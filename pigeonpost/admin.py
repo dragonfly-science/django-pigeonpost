@@ -5,7 +5,8 @@ from django.contrib.admin import ModelAdmin
 from pigeonpost.models import Pigeon, Outbox
 
 class PigeonAdmin(ModelAdmin):
-    list_display = ('id', 'source', 'source_edit', 'scheduled_for', 'render_email_method', 'successes', 'failures')
+    list_display = ('id', 'source', 'source_edit', 'scheduled_for',
+            'render_email_method', 'send_to', 'send_to_method', 'to_send', 'sent_at')
     list_filter = ('to_send',)
 
     related_lookup_fields = {
