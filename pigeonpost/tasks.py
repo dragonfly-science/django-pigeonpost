@@ -20,6 +20,18 @@ from pigeonpost.signals import pigeonpost_pre_send, pigeonpost_post_send
 send_logger = logging.getLogger('pigeonpost.send')
 dryrun_logger = logging.getLogger('pigeonpost.dryrun')
 
+def add_to_outbox(message, user):
+    """
+    Allows for a generic email message to be sent via pigeon post outbox.
+
+    Note that it is not connected to a Pigeon object, so once it is placed in
+    the queue it's up to the caller to manage the message if something changes
+    before the message is sent.
+    """
+    msg = Outbox(message=pickle.dumps(message), user=user)
+    msg.save()
+    return msg
+
 def process_queue(force=False, dry_run=False):
     """
     Takes pigeons from queue, adds messages to the outbox 
@@ -68,7 +80,7 @@ def process_outbox(max_retries=3, pigeon=None):
     try:
         connection = mail.get_connection()
         if settings.EMAIL_HOST:
-            send_logger.debug("Connection made to %s:%s ".format(
+            send_logger.debug("Sending pigeons via %s:%s " % (
                 settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
             send_logger.debug("A message to deliver!")
@@ -78,6 +90,7 @@ def process_outbox(max_retries=3, pigeon=None):
             successful = bool(successful)
             pigeonpost_post_send.send(email, successful=successful)
             if not successful:
+                send_logger.debug("Message failed!")
                 msg.failures += 1
             else:
                 send_logger.debug("Message sent!")
@@ -86,14 +99,6 @@ def process_outbox(max_retries=3, pigeon=None):
             msg.save()
     except (smtplib.SMTPException, smtplib.socket.error) as err:
         send_logger.exception(err.args[0])
-    finally:
-        connection.close()
-        if settings.EMAIL_HOST:
-            send_logger.debug("Connection closed to %s:%s ".format(
-                settings.EMAIL_HOST, settings.EMAIL_PORT))
-
-def add_to_outbox(message, user):
-    Outbox(message=pickle.dumps(message), user=user).save()
 
 @receiver(pigeonpost_queue)
 def add_to_queue(sender, render_email_method='render_email', send_to=None, send_to_method=None, scheduled_for=None, defer_for=None, **kwargs):
@@ -128,7 +133,6 @@ def deploy_pigeons(force=False, dry_run=False):
     if not dry_run:
         process_outbox()
 send_email = deploy_pigeons # Alias
-
 
 def kill_pigeons():
     """
