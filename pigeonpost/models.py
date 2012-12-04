@@ -44,4 +44,5 @@ class Outbox(models.Model):
     class Meta:
         unique_together = ('pigeon', 'user')
         ordering = ['sent_at']
+        verbose_name_plural = 'outboxes'
 
