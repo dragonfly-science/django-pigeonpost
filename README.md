@@ -207,6 +207,12 @@ Maybe you should use this [other django mailing solution by James Tauber](https:
 
 ## Release Notes
 
+### 0.1.4
+
+* Fix `process_outbox` log messages.
+* Fix bad use of django mail connection.
+* Allow `Pigeon.send_to` to be blank.
+
 ### 0.1.3
 
 Minor changes to improve the admin display and slight logic change to updating
