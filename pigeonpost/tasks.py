@@ -86,6 +86,10 @@ def process_outbox(max_retries=3, pigeon=None):
             send_logger.debug("A message to deliver!")
             email = pickle.loads(msg.message.encode('utf-8'))
             pigeonpost_pre_send.send(email)
+            if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
+                email.to = [settings.PIGEONPOST_SINK_EMAIL]
+                email.cc = []
+                email.bcc = []
             successful = connection.send_messages([email])
             successful = bool(successful)
             pigeonpost_post_send.send(email, successful=successful)

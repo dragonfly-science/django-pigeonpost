@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core import mail
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost_example.models import ModeratedNews, News, Profile, BobsNews
@@ -93,6 +94,22 @@ class TestExampleMessage(TestCase):
         messages = Outbox.objects.all()
         self.assertEqual(len(messages), 2)
         self.assertEqual(len(mail.outbox), 2)
+
+    def test_email_to_address(self):
+        send_email(force=True)
+        messages = Outbox.objects.all()
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[0].to, ['a@example.com'])
+        self.assertEqual(mail.outbox[1].to, ['b@example.com'])
+
+    @override_settings(PIGEONPOST_SINK_EMAIL='sink@example.com')
+    def test_sink_email_setting(self):
+        send_email(force=True)
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[0].to, ['sink@example.com'])
+        self.assertEqual(mail.outbox[1].to, ['sink@example.com'])
     
     def test_kill_pigeons(self):
         """ Kill pigeons stops any unsent pigeons from delivering messages """

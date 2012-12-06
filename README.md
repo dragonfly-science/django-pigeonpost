@@ -146,6 +146,12 @@ For example, the below code sends the same pigeon twice:
 Due to the sleep function, and the pigeon being resubmitted, the actual email
 won't be scheduled until 15 minutes after this code begins execution.
 
+### Development/Testing environments
+
+To avoid actually sending emails to other users, but to still actually send them,
+you can put PIGEONPOST_SINK_EMAIL in settings.py. It should be a single email
+address as a string, and it will receive all generated emails.
+
 ## Example
 
 ### Send everyone an email once a Post is saved.
@@ -206,6 +212,11 @@ Pigeonpost provides several signals to support advanced functionality:
 Maybe you should use this [other django mailing solution by James Tauber](https://github.com/jtauber/django-mailer/).
 
 ## Release Notes
+
+### 0.1.5
+
+* Support PIGEONPOST_SINK_EMAIL setting, which redirects ALL email to a single
+  email address. Good for development and staging environments.
 
 ### 0.1.4
 
