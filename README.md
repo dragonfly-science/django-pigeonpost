@@ -213,6 +213,10 @@ Maybe you should use this [other django mailing solution by James Tauber](https:
 
 ## Release Notes
 
+### 0.1.6
+
+* Catch bug where pigeons that had no recipients would never get marked to_send=False.
+
 ### 0.1.5
 
 * Support PIGEONPOST_SINK_EMAIL setting, which redirects ALL email to a single
