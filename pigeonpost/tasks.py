@@ -41,6 +41,15 @@ def process_queue(force=False, dry_run=False):
     else:
         pigeons = Pigeon.objects.filter(scheduled_for__lte=datetime.datetime.now(), to_send=True)
     for pigeon in pigeons:
+        # Ensure the source object that the pigeon is related to still exists.
+        # If it doesn't, then we just mark the pigeon as processed and move on.
+        if pigeon.source is None:
+            pigeon.to_send = False
+            pigeon.save()
+            dryrun_logger.debug("Skipping Pigeon %d with missing %s source object" %
+                    (pigeon.id, str(pigeon.source_content_type)) )
+            pigeon.failures += 1
+            continue
         # Get method for rendering email for each user
         render_email = getattr(pigeon.source, pigeon.render_email_method)
         # Get a list of users to potentially generated emails for
@@ -66,9 +75,10 @@ def process_queue(force=False, dry_run=False):
                     Outbox.objects.get(pigeon=pigeon, user=user)
                 except Outbox.DoesNotExist:
                     Outbox(pigeon=pigeon, user=user, message=pickle.dumps(email, 0)).save()
-            pigeon.to_send = False
-            pigeon.sent_at = datetime.datetime.now()
-            pigeon.save()
+                pigeon.successes+=1
+        pigeon.to_send = False
+        pigeon.sent_at = datetime.datetime.now()
+        pigeon.save()
 
 def process_outbox(max_retries=3, pigeon=None):
     """
@@ -83,13 +93,16 @@ def process_outbox(max_retries=3, pigeon=None):
             send_logger.debug("Sending pigeons via %s:%s " % (
                 settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
-            send_logger.debug("A message to deliver!")
             email = pickle.loads(msg.message.encode('utf-8'))
             pigeonpost_pre_send.send(email)
             if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
+                send_logger.debug("A message for %s, rerouting to %s!" %
+                        (email.to, settings.PIGEONPOST_SINK_EMAIL))
                 email.to = [settings.PIGEONPOST_SINK_EMAIL]
                 email.cc = []
                 email.bcc = []
+            else:
+                send_logger.debug("A message for %s to deliver!" % email.to)
             successful = connection.send_messages([email])
             successful = bool(successful)
             pigeonpost_post_send.send(email, successful=successful)

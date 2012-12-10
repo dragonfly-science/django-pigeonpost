@@ -221,3 +221,17 @@ class TestTargettedPigeons(TestCase):
         self.assertEqual(len(messages),1)
         self.assertEqual(messages[0].user, self.bob)
 
+    def test_no_recipients(self):
+        """ Test that the pigeon is processed correctly when there are no recipients """
+        # Remove Bob
+        User.objects.filter(username='b').delete()
+        # Then try to send custom news to Bob
+        pigeonpost_queue.send(sender=self.news, render_email_method='email_news',
+                send_to_method='get_everyone_called_bob') 
+        process_queue()
+
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),0)
+
+        pigeon = Pigeon.objects.get(source_id=self.news.id)
+        self.assertEqual(pigeon.to_send, False)
