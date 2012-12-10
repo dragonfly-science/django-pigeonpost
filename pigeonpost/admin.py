@@ -23,7 +23,7 @@ class PigeonAdmin(ModelAdmin):
         if obj.send_to_method:
             return obj.send_to_method
         return ''
-    _send_to.short_description = 'send_to_method'
+    _send_to_method.short_description = 'send_to_method'
 
     def source_edit(self, obj):
         ct = obj.source_content_type
