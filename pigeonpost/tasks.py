@@ -45,10 +45,10 @@ def process_queue(force=False, dry_run=False):
         # If it doesn't, then we just mark the pigeon as processed and move on.
         if pigeon.source is None:
             pigeon.to_send = False
+            pigeon.failures += 1
             pigeon.save()
             dryrun_logger.debug("Skipping Pigeon %d with missing %s source object" %
                     (pigeon.id, str(pigeon.source_content_type)) )
-            pigeon.failures += 1
             continue
         # Get method for rendering email for each user
         render_email = getattr(pigeon.source, pigeon.render_email_method)
