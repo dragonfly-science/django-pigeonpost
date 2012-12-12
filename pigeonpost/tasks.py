@@ -1,10 +1,7 @@
 import datetime
 import logging
 import smtplib
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 
 from django.core import mail
 from django.contrib.contenttypes.models import ContentType
@@ -74,7 +71,8 @@ def process_queue(force=False, dry_run=False):
                 try:
                     Outbox.objects.get(pigeon=pigeon, user=user)
                 except Outbox.DoesNotExist:
-                    Outbox(pigeon=pigeon, user=user, message=pickle.dumps(email, 0)).save()
+                    pickled = pickle.dumps(email, 2)
+                    Outbox(pigeon=pigeon, user=user, message=pickled.encode('base64')).save()
                 pigeon.successes+=1
         pigeon.to_send = False
         pigeon.sent_at = datetime.datetime.now()
@@ -93,7 +91,7 @@ def process_outbox(max_retries=3, pigeon=None):
             send_logger.debug("Sending pigeons via %s:%s " % (
                 settings.EMAIL_HOST, settings.EMAIL_PORT))
         for msg in Outbox.objects.filter(**query_params):
-            email = pickle.loads(msg.message.encode('utf-8'))
+            email = pickle.loads(msg.message.decode('base64'))
             pigeonpost_pre_send.send(email)
             if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
                 send_logger.debug("A message for %s, rerouting to %s!" %
