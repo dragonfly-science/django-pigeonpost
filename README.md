@@ -213,6 +213,14 @@ Maybe you should use this [other django mailing solution by James Tauber](https:
 
 ## Release Notes
 
+### 0.1.7
+
+* Move to base64 representation of outbox messages. Due to pickle not actually
+  using ASCII! See the official bug [here](http://bugs.python.org/issue2980).
+  You will need to purge your outbox of any unsent messages before upgrading.
+  The best process is to deploy_pigeons and upgrade before any new Outbox
+  objects are created (usually this only happens from the deploy_pigeons task).
+
 ### 0.1.6
 
 * Catch bug where pigeons that had no recipients would never get marked to_send=False.
