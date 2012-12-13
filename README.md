@@ -213,6 +213,11 @@ Maybe you should use this [other django mailing solution by James Tauber](https:
 
 ## Release Notes
 
+### 0.1.8
+
+* truncate number of sink emails that are sent when a pigeon has lots of
+  destination users.
+
 ### 0.1.7
 
 * Move to base64 representation of outbox messages. Due to pickle not actually
