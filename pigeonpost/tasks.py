@@ -58,6 +58,10 @@ def process_queue(force=False, dry_run=False):
         else:
             users = User.objects.filter(is_active=True)
         # Iterate through the users and try adding messages to the Outbox model
+        if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
+            send_logger.debug("Using sink email and a message for %d users, only sending first 5!" %
+                    len(users))
+            users = users[:5]
         for user in users:
             email = render_email(user)
             if dry_run:
