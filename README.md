@@ -213,6 +213,14 @@ Maybe you should use this [other django mailing solution by James Tauber](https:
 
 ## Release Notes
 
+### 0.1.9
+
+* Fix race condition: running deploy_pigeons when it's already running
+  results in duplicate sending, now it uses a lockfile.
+* Protection against client code accidentally returning the same user.
+* When sending mail fails, record and report it... this was intended, but code
+  was incorrectly waiting for a return value instead of catching exceptions.
+
 ### 0.1.8
 
 * truncate number of sink emails that are sent when a pigeon has lots of

@@ -29,6 +29,14 @@ def add_to_outbox(message, user):
     msg.save()
     return msg
 
+def unique(the_list):
+    """ Used to remove duplicate users, but preserving send order """
+    seen = set()
+    for x in the_list:
+        if x in seen: continue
+        seen.add(x)
+        yield x
+
 def process_queue(force=False, dry_run=False):
     """
     Takes pigeons from queue, adds messages to the outbox 
@@ -57,6 +65,9 @@ def process_queue(force=False, dry_run=False):
             users = get_user_method()
         else:
             users = User.objects.filter(is_active=True)
+        # prevent users getting duplicate emails if the get_user_method is naughty
+        # and adds a user twice
+        users = list(unique(users))
         # Iterate through the users and try adding messages to the Outbox model
         if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
             send_logger.debug("Using sink email and a message for %d users, only sending first 5!" %
@@ -105,17 +116,17 @@ def process_outbox(max_retries=3, pigeon=None):
                 email.bcc = []
             else:
                 send_logger.debug("A message for %s to deliver!" % email.to)
-            successful = connection.send_messages([email])
-            successful = bool(successful)
-            pigeonpost_post_send.send(email, successful=successful)
-            if not successful:
-                send_logger.debug("Message failed!")
-                msg.failures += 1
-            else:
+            try:
+                connection.send_messages([email])
                 send_logger.debug("Message sent!")
-            msg.succeeded = successful
-            msg.sent_at = datetime.datetime.now()
+                msg.succeeded = True
+                msg.sent_at = datetime.datetime.now()
+            except (smtplib.SMTPException, smtplib.socket.error) as err:
+                send_logger.debug("Message failed!")
+                send_logger.exception(err.args[0])
+                msg.failures += 1
             msg.save()
+            pigeonpost_post_send.send(email, successful=msg.succeeded)
     except (smtplib.SMTPException, smtplib.socket.error) as err:
         send_logger.exception(err.args[0])
 
@@ -147,12 +158,16 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
                 send_to_method=send_to_method)
         p.save()
 
+from pigeonpost.utils import single_instance
+
+@single_instance('pigeonpost')
 def deploy_pigeons(force=False, dry_run=False):
     process_queue(force=force, dry_run=dry_run)
     if not dry_run:
         process_outbox()
 send_email = deploy_pigeons # Alias
 
+@single_instance('pigeonpost')
 def kill_pigeons():
     """
     Mark all unsent pigeons in the queue as send=False, so that they won't

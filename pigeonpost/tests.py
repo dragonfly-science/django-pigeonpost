@@ -12,7 +12,7 @@ from django.test.utils import override_settings
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost_example.models import ModeratedNews, News, Profile, BobsNews
-from pigeonpost.tasks import send_email, kill_pigeons, process_queue, process_outbox
+from pigeonpost.tasks import send_email, kill_pigeons, process_queue
 from pigeonpost.signals import pigeonpost_queue
 
 def create_fixtures(create_message=True):
