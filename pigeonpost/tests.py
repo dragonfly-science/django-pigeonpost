@@ -199,6 +199,8 @@ class TestTargettedPigeons(TestCase):
         self.users, self.staff, _, _ = create_fixtures(create_message=False)
         self.news = BobsNews(subject='Propaganda daily', body='Bob is a great guy.')
         self.news.save()
+        self.moderated_news = ModeratedNews(subject='Propaganda daily', body='Bob is not a great guy.')
+        self.moderated_news.save()
         self.bob = User.objects.get(first_name__iexact='bob')
  
     def test_send_to(self):
@@ -235,3 +237,11 @@ class TestTargettedPigeons(TestCase):
 
         pigeon = Pigeon.objects.get(source_id=self.news.id)
         self.assertEqual(pigeon.to_send, False)
+
+    def test_no_method_or_target(self):
+        """ Test that the pigeon is processed correctly when there are no recipients """
+        # Then try to send custom news to Bob
+        pigeonpost_queue.send(sender=self.moderated_news, render_email_method='email_moderators')
+        process_queue()
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),2)
