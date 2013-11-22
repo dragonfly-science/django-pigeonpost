@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='pigeonpost',
-      version='0.2.0',
+      version='0.2.1',
       description='Buffered delivery of emails in Django',
       author='Edward Abraham, Joel Pitt',
       author_email='edward@dragonfly.co.nz',

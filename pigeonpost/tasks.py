@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.utils.timezone import now
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost.signals import pigeonpost_queue
@@ -44,7 +45,7 @@ def process_queue(force=False, dry_run=False):
     if force:
         pigeons = Pigeon.objects.filter(to_send=True)
     else:
-        pigeons = Pigeon.objects.filter(scheduled_for__lte=datetime.datetime.now(), to_send=True)
+        pigeons = Pigeon.objects.filter(scheduled_for__lte=now(), to_send=True)
     for pigeon in pigeons:
         # Ensure the source object that the pigeon is related to still exists.
         # If it doesn't, then we just mark the pigeon as processed and move on.
@@ -90,7 +91,7 @@ def process_queue(force=False, dry_run=False):
                     Outbox(pigeon=pigeon, user=user, message=pickled.encode('base64')).save()
                 pigeon.successes+=1
         pigeon.to_send = False
-        pigeon.sent_at = datetime.datetime.now()
+        pigeon.sent_at = now()
         pigeon.save()
 
 def process_outbox(max_retries=3, pigeon=None):
@@ -120,7 +121,7 @@ def process_outbox(max_retries=3, pigeon=None):
                 connection.send_messages([email])
                 send_logger.debug("Message sent!")
                 msg.succeeded = True
-                msg.sent_at = datetime.datetime.now()
+                msg.sent_at = now()
             except (smtplib.SMTPException, smtplib.socket.error) as err:
                 send_logger.debug("Message failed!")
                 send_logger.exception(err.args[0])
@@ -136,9 +137,9 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
     assert not (scheduled_for and defer_for)
     # Work out the scheduled delivery time if necessary
     if defer_for is not None:
-        scheduled_for = datetime.datetime.now() + datetime.timedelta(seconds=defer_for)
+        scheduled_for = now() + datetime.timedelta(seconds=defer_for)
     elif scheduled_for is None:
-        scheduled_for = datetime.datetime.now()
+        scheduled_for = now()
     try:
         p = Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
                 source_id=sender.id,
