@@ -146,6 +146,22 @@ For example, the below code sends the same pigeon twice:
 Due to the sleep function, and the pigeon being resubmitted, the actual email
 won't be scheduled until 15 minutes after this code begins execution.
 
+### Helper function for multiple message formats
+
+A common pattern is to send an HTML and text version of an email.
+
+While django provides this functionality, we provide a wrapper function that
+takes a user, subject, context and two templates to be rendered. One for
+the text version, and another for html:
+
+```python
+from pigeonpost.utils import generate_email
+
+u = User.objects.get(username='bob')
+email_message = generate_email(u, "hello bob", dict(msg="you are a funny guy"), 'funny.txt', 'funny.html')
+
+```
+
 ### Development/Testing environments
 
 To avoid actually sending emails to other users, but to still actually send them,
@@ -212,6 +228,19 @@ Pigeonpost provides several signals to support advanced functionality:
 Maybe you should use this [other django mailing solution by James Tauber](https://github.com/jtauber/django-mailer/).
 
 ## Release Notes
+
+### 0.2.0
+
+* Adopt semantic versioning.
+* Add new function `pigeonpost.utils.generate_email`
+
+### 0.1.9
+
+* Fix race condition: running deploy_pigeons when it's already running
+  results in duplicate sending, now it uses a lockfile.
+* Protection against client code accidentally returning the same user.
+* When sending mail fails, record and report it... this was intended, but code
+  was incorrectly waiting for a return value instead of catching exceptions.
 
 ### 0.1.8
 
