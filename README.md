@@ -253,6 +253,11 @@ instance. To upgrade from 0.1.1, the appropriate sql patches in
 pigeonpost/sql-migrations should be applied.
 
 
+## Licence
+
+Pigeonpost is copyright [Dragonfly Science](http://www.dragonfly.co.nz) and is made
+available under an [MIT License](LICENCE.txt).
+
 ## The Kereru
 
 The kereru or [New Zealand wood pigeon](http://en.wikipedia.org/wiki/New_Zealand_Pigeon)
