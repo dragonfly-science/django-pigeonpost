@@ -2,7 +2,7 @@
 
 ## About
 
-Pigeonpost is a tool to make it simple to queue and send emails as a model is saved.
+Pigeonpost is a tool to queue and send emails when a Django model is saved.
 
 ## Overview
 
@@ -15,10 +15,6 @@ To send mail, implementers should
    `python manage.py deploy_pigeons`
 
 Moderation is explained within Usage, below.
-
-## Limitations
-
-* No effort is made to rate limit messages to your SMTP server.
 
 ## Installation
 
@@ -43,7 +39,7 @@ The easiest way is to us the `pip` installer
 ### Creating mail
 
 In your application, add a method on your models called `render_email`.
-`render_email` takes a `User` and generates either an EmailMessage or returns
+`render_email` takes a `User` and generates either an `EmailMessage` or returns
 `None`. If `None` is returned, no email is sent to that `User`.
 
 When you save an instance of a model that you want to be emailed, just send a signal
@@ -223,6 +219,11 @@ Pigeonpost provides several signals to support advanced functionality:
 * `pigeonpost_pre_send`  
 * `pigeonpost_post_send`
 
+## Limitations
+
+* No effort is made to rate limit messages to your SMTP server.
+
+
 ## Other mailers
 
 Maybe you should use this [other django mailing solution by James Tauber](https://github.com/jtauber/django-mailer/).
@@ -292,7 +293,7 @@ available under an [MIT License](LICENCE.txt).
 The kereru or [New Zealand wood pigeon](http://en.wikipedia.org/wiki/New_Zealand_Pigeon)
 is a large fruit-eating forest pigeon, endemic to New Zealand. The population
 declined considerably duing the 20th century, due to pressure form habitat
-destruction and from introduced mammalian pests. while it is beautiful bird, it
+destruction and from introduced mammalian pests. While it is beautiful bird, it
 is a clumsy, noisy flyer. As far as we know, it has not been used for carrying
 either letters or email.
 
