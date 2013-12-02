@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/dragonfly-science/django-pigeonpost.png?branch=master)](https://travis-ci.org/dragonfly-science/django-pigeonpost)
+
 ## Pigeonpost is a django application for sending emails
 
 ## About
