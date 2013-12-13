@@ -6,5 +6,9 @@
 
 pip-log.txt
 
-build/*
-htmlcov/*
+/build/*
+/htmlcov/*
+
+/doc/_build/*
+
+pigeonpost.egg-info
