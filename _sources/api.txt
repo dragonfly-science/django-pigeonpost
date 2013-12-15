@@ -4,12 +4,13 @@ Detailed usage
 Creating mail
 -------------
 
-Add a method ``render_email`` to the model that represents the data to be sent
-in the email.
+Add a method ``render_email`` to the model that will contain the information to
+be sent in the email.
 
-``render_email`` takes a :class:`django.contrib.auth.models.User` and generates
-either a :class:`django.core.mail.EmailMessage` or returns
-``None``. If ``None`` is returned, no email is sent to that ``User``.
+``render_email`` is an instance method that takes
+a :class:`django.contrib.auth.models.User` and generates either
+a :class:`django.core.mail.EmailMessage` or returns ``None``. If ``None`` is
+returned, no email is sent to that ``User``.
 
 When you save an instance of a model that you want to generate an email, just send a signal
 to ``pigeonpost_queue``::
@@ -20,9 +21,9 @@ to ``pigeonpost_queue``::
         ...
         pigeonpost_queue.send(sender=self,...)
 
-This signal tells pigeonpost when to send the message. The instance is added to
-the queue, with the ``render_email`` method being called for each user
-immediately before the message is sent.
+This signal tells pigeonpost to queue a pigeon for sending. The model instance
+is added to the queue, and when the queue is processed the ``render_email``
+method being will be called for each user immediately before the email is sent.
 
 A cron job can be used to send any queued messages, which will use the standard
 django email mechanism::

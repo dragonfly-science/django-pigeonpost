@@ -55,11 +55,12 @@
 <h1>Detailed usage<a class="headerlink" href="#detailed-usage" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="creating-mail">
 <h2>Creating mail<a class="headerlink" href="#creating-mail" title="Permalink to this headline">¶</a></h2>
-<p>Add a method <tt class="docutils literal"><span class="pre">render_email</span></tt> to the model that represents the data to be sent
-in the email.</p>
-<p><tt class="docutils literal"><span class="pre">render_email</span></tt> takes a <tt class="xref py py-class docutils literal"><span class="pre">django.contrib.auth.models.User</span></tt> and generates
-either a <tt class="xref py py-class docutils literal"><span class="pre">django.core.mail.EmailMessage</span></tt> or returns
-<tt class="docutils literal"><span class="pre">None</span></tt>. If <tt class="docutils literal"><span class="pre">None</span></tt> is returned, no email is sent to that <tt class="docutils literal"><span class="pre">User</span></tt>.</p>
+<p>Add a method <tt class="docutils literal"><span class="pre">render_email</span></tt> to the model that will contain the information to
+be sent in the email.</p>
+<p><tt class="docutils literal"><span class="pre">render_email</span></tt> is an instance method that takes
+a <tt class="xref py py-class docutils literal"><span class="pre">django.contrib.auth.models.User</span></tt> and generates either
+a <tt class="xref py py-class docutils literal"><span class="pre">django.core.mail.EmailMessage</span></tt> or returns <tt class="docutils literal"><span class="pre">None</span></tt>. If <tt class="docutils literal"><span class="pre">None</span></tt> is
+returned, no email is sent to that <tt class="docutils literal"><span class="pre">User</span></tt>.</p>
 <p>When you save an instance of a model that you want to generate an email, just send a signal
 to <tt class="docutils literal"><span class="pre">pigeonpost_queue</span></tt>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pigeonpost.signals</span> <span class="kn">import</span> <span class="n">pigeonpost_queue</span>
@@ -69,9 +70,9 @@ to <tt class="docutils literal"><span class="pre">pigeonpost_queue</span></tt>:<
     <span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span><span class="o">...</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This signal tells pigeonpost when to send the message. The instance is added to
-the queue, with the <tt class="docutils literal"><span class="pre">render_email</span></tt> method being called for each user
-immediately before the message is sent.</p>
+<p>This signal tells pigeonpost to queue a pigeon for sending. The model instance
+is added to the queue, and when the queue is processed the <tt class="docutils literal"><span class="pre">render_email</span></tt>
+method being will be called for each user immediately before the email is sent.</p>
 <p>A cron job can be used to send any queued messages, which will use the standard
 django email mechanism:</p>
 <div class="highlight-python"><pre>python manage.py deploy_pigeons</pre>
@@ -275,7 +276,7 @@ improve it in this way.</p>
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, Joel Pitt, Edward Abraham, Tim McNamara.
+        &copy; Copyright 2013, Dragonfly Science.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>
