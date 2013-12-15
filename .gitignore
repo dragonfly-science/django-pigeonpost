@@ -1,0 +1,7 @@
+*.un~
+*.pyc
+*.swp
+.coverage
+/doc/
+/htmlcov/
+/build/

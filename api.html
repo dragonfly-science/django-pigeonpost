@@ -1,0 +1,282 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Detailed usage &mdash; Pigeon Post 0.2.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pigeon Post 0.2.1 documentation" href="index.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Getting Started" href="getting_started.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="examples.html" title="Examples"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="getting_started.html" title="Getting Started"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pigeon Post 0.2.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="detailed-usage">
+<h1>Detailed usage<a class="headerlink" href="#detailed-usage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="creating-mail">
+<h2>Creating mail<a class="headerlink" href="#creating-mail" title="Permalink to this headline">¶</a></h2>
+<p>Add a method <tt class="docutils literal"><span class="pre">render_email</span></tt> to the model that represents the data to be sent
+in the email.</p>
+<p><tt class="docutils literal"><span class="pre">render_email</span></tt> takes a <tt class="xref py py-class docutils literal"><span class="pre">django.contrib.auth.models.User</span></tt> and generates
+either a <tt class="xref py py-class docutils literal"><span class="pre">django.core.mail.EmailMessage</span></tt> or returns
+<tt class="docutils literal"><span class="pre">None</span></tt>. If <tt class="docutils literal"><span class="pre">None</span></tt> is returned, no email is sent to that <tt class="docutils literal"><span class="pre">User</span></tt>.</p>
+<p>When you save an instance of a model that you want to generate an email, just send a signal
+to <tt class="docutils literal"><span class="pre">pigeonpost_queue</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pigeonpost.signals</span> <span class="kn">import</span> <span class="n">pigeonpost_queue</span>
+
+<span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span><span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This signal tells pigeonpost when to send the message. The instance is added to
+the queue, with the <tt class="docutils literal"><span class="pre">render_email</span></tt> method being called for each user
+immediately before the message is sent.</p>
+<p>A cron job can be used to send any queued messages, which will use the standard
+django email mechanism:</p>
+<div class="highlight-python"><pre>python manage.py deploy_pigeons</pre>
+</div>
+</div>
+<div class="section" id="directed-pigeons">
+<h2>Directed Pigeons<a class="headerlink" href="#directed-pigeons" title="Permalink to this headline">¶</a></h2>
+<p>Pigeonpost originally would call the <tt class="docutils literal"><span class="pre">render_email</span></tt> method for <strong>every</strong> user.
+This is still the default behaviour but you can now target your pigeons to avoid
+this behaviour which is inefficient when your User base becomes large.</p>
+<p>To target the pigeon you pass either <tt class="docutils literal"><span class="pre">send_to</span></tt> or
+<tt class="docutils literal"><span class="pre">send_to_method</span></tt> to the <tt class="docutils literal"><span class="pre">pigeonpost_queue</span></tt> signal along with the normal options.</p>
+<p><tt class="docutils literal"><span class="pre">send_to</span></tt> is good for sending to a single specific user:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">u</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;bob&#39;</span><span class="p">)</span>
+<span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">send_to</span><span class="o">=</span><span class="n">u</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>it will completely avoid the loop and only call <tt class="docutils literal"><span class="pre">render_email</span></tt> with the <tt class="docutils literal"><span class="pre">send_to</span></tt>
+user. It will still only send the email if <tt class="docutils literal"><span class="pre">render_email</span></tt> returns an
+<tt class="docutils literal"><span class="pre">EmailMessage</span></tt> and not <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+<p><tt class="docutils literal"><span class="pre">send_to_method</span></tt> is good if you have some logic about which users you want to
+send an email to, and it can be expressed faster (or in a conceptually simpler
+way) than working it out on a per-user basis. The method should return an iterable of
+<tt class="docutils literal"><span class="pre">Users</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">get_subscribers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># assuming a ManyToManyField called subscribers.</span>
+    <span class="k">return</span> <span class="n">subscriptions</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="n">u</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;bob&#39;</span><span class="p">)</span>
+<span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">send_to</span><span class="o">=</span><span class="n">u</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Do not define both <tt class="docutils literal"><span class="pre">send_to</span></tt> and <tt class="docutils literal"><span class="pre">send_to_method</span></tt>. The resulting behaviour is
+not guaranteed and your Pigeons may get confused.</p>
+</div>
+<div class="section" id="multiple-emails">
+<h2>Multiple emails<a class="headerlink" href="#multiple-emails" title="Permalink to this headline">¶</a></h2>
+<p>You can change the <tt class="docutils literal"><span class="pre">render_email</span></tt> method by passing <tt class="docutils literal"><span class="pre">render_email_method</span></tt> as
+an argument to the pigeonpost_queue. This allows you to use different logic and
+delays before sending email.</p>
+<p>E.g. you could send specific updates to an admin as well as use a general
+<tt class="docutils literal"><span class="pre">render_email</span></tt> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">u</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;bob&#39;</span><span class="p">)</span>
+<span class="n">admin</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;admin&#39;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">profile</span> <span class="c"># Has a render_email method and a sysop_email method</span>
+<span class="n">ten_minutes</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="mi">60</span>
+<span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">defer_for</span><span class="o">=</span><span class="n">ten_minutes</span><span class="p">)</span>
+<span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">send_to</span><span class="o">=</span><span class="n">admin</span><span class="p">,</span> <span class="n">render_email_method</span><span class="o">=</span><span class="s">&#39;sysop_email&#39;</span><span class="p">,</span> <span class="n">defer_for</span><span class="o">=</span><span class="n">ten_minutes</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="moderation">
+<h2>Moderation<a class="headerlink" href="#moderation" title="Permalink to this headline">¶</a></h2>
+<p>Emails are not sent immediately when pigeonpost_queue.send is called. First the
+deploy_pigeons management task needs to be run, and second, the <tt class="docutils literal"><span class="pre">defer_for</span></tt>
+parameter delays when the pigeon is transmuted into an Outbox object.</p>
+<p>This gives window for amendments to be made and for the messages to be blocked by
+admins if required. Once that time period passes, messages are sent.</p>
+<p>In addition, it allows for multiple changes to a model to be buffered before
+sending. If you submit the same model instance, with the same parameters (apart
+from when to send the email), it will update the scheduled time for sending the
+existing pigeon.</p>
+<p>For example, the below code queues the same pigeon twice, but will only send
+one message:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">u</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;bob&#39;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">profile</span> <span class="c"># Has a render_email method</span>
+<span class="n">ten_minutes</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="mi">60</span>
+<span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">defer_for</span><span class="o">=</span><span class="n">ten_minutes</span><span class="p">)</span> <span class="c"># send in 10 minutes</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+<span class="n">sleep</span><span class="p">(</span><span class="n">ten_minutes</span><span class="o">/</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">pigeonpost_queue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">defer_for</span><span class="o">=</span><span class="mi">10</span><span class="o">*</span><span class="mi">60</span><span class="p">)</span> <span class="c"># send in 10 minutes</span>
+</pre></div>
+</div>
+<p>Due to the sleep function, and the pigeon being resubmitted, the actual email
+won&#8217;t be scheduled until 15 minutes after this code begins execution.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Don&#8217;t actually call <tt class="docutils literal"><span class="pre">sleep</span></tt> while processing a request. It
+could potentially block your server from processing other requests!</p>
+</div>
+</div>
+<div class="section" id="helper-function-for-multiple-message-formats">
+<h2>Helper function for multiple message formats<a class="headerlink" href="#helper-function-for-multiple-message-formats" title="Permalink to this headline">¶</a></h2>
+<p>A common pattern is to send an HTML and text version of an email.</p>
+<p>While django provides this functionality, we provide a wrapper function that
+takes a user, subject, context and two templates to be rendered. One template for
+the text version, and another for html:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pigeonpost.utils</span> <span class="kn">import</span> <span class="n">generate_email</span>
+
+<span class="n">u</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;bob&#39;</span><span class="p">)</span>
+<span class="n">email_message</span> <span class="o">=</span> <span class="n">generate_email</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="s">&quot;hello bob&quot;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">msg</span><span class="o">=</span><span class="s">&quot;you are a funny guy&quot;</span><span class="p">),</span> <span class="s">&#39;funny.txt&#39;</span><span class="p">,</span> <span class="s">&#39;funny.html&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This returns a <tt class="xref py py-class docutils literal"><span class="pre">django.core.mail.EmailMultiAlternatives</span></tt> object, which
+can passed as the return value from a render_email method because it inherits
+from <tt class="xref py py-class docutils literal"><span class="pre">django.core.mail.EmailMessage</span></tt>.</p>
+</div>
+<div class="section" id="development-testing-environments">
+<h2>Development/Testing environments<a class="headerlink" href="#development-testing-environments" title="Permalink to this headline">¶</a></h2>
+<p>To avoid actually sending emails to other users, but to still actually send
+them via your main SMTP host, you can put <tt class="docutils literal"><span class="pre">PIGEONPOST_SINK_EMAIL</span></tt> in
+settings.py.  It should be a single email address as a string, and it will
+receive all generated emails.</p>
+<p>Alternatively, you could also run a console logging smtp server, using the
+standard Python smtpd library:</p>
+<div class="highlight-python"><pre>python -m smtpd -n -c DebuggingServer localhost:1025</pre>
+</div>
+</div>
+<div class="section" id="setting-up-cron">
+<h2>Setting up cron<a class="headerlink" href="#setting-up-cron" title="Permalink to this headline">¶</a></h2>
+<p>To check for any new pigeons, generate and send messages every 10 minutes, add
+the following line to your cron:</p>
+<div class="highlight-python"><pre>*/10 * * * * python /path/to/project/manage.py deploy_pigeons</pre>
+</div>
+</div>
+<div class="section" id="available-signals">
+<h2>Available signals<a class="headerlink" href="#available-signals" title="Permalink to this headline">¶</a></h2>
+<p>Pigeonpost provides several signals to support advanced functionality:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">pigeonpost_immediate</span></tt> - A message has been created to be sent immediately.</li>
+<li><tt class="docutils literal"><span class="pre">pigeonpost_queue</span></tt> - A message has been created, to be added to the queue.</li>
+<li><tt class="docutils literal"><span class="pre">pigeonpost_pre_send</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">pigeonpost_post_send</span></tt></li>
+</ul>
+</div>
+<div class="section" id="caveats-and-alternatives">
+<h2>Caveats and alternatives<a class="headerlink" href="#caveats-and-alternatives" title="Permalink to this headline">¶</a></h2>
+<p>Pigeonpost was made and has been used in a number of websites, but these are
+mostly small scale (e.g. &lt; 1000 users). Some of the mechanisms of pigeonpost
+are not optimised for larger deployments, although it wouldn&#8217;t be hard to
+improve it in this way.</p>
+<p>Other mailing systems that we know of are:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/jtauber/django-mailer/">django-mailer</a> by James Tauber.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Detailed usage</a><ul>
+<li><a class="reference internal" href="#creating-mail">Creating mail</a></li>
+<li><a class="reference internal" href="#directed-pigeons">Directed Pigeons</a></li>
+<li><a class="reference internal" href="#multiple-emails">Multiple emails</a></li>
+<li><a class="reference internal" href="#moderation">Moderation</a></li>
+<li><a class="reference internal" href="#helper-function-for-multiple-message-formats">Helper function for multiple message formats</a></li>
+<li><a class="reference internal" href="#development-testing-environments">Development/Testing environments</a></li>
+<li><a class="reference internal" href="#setting-up-cron">Setting up cron</a></li>
+<li><a class="reference internal" href="#available-signals">Available signals</a></li>
+<li><a class="reference internal" href="#caveats-and-alternatives">Caveats and alternatives</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="getting_started.html"
+                        title="previous chapter">Getting Started</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="examples.html"
+                        title="next chapter">Examples</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/api.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="examples.html" title="Examples"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="getting_started.html" title="Getting Started"
+             >previous</a> |</li>
+        <li><a href="index.html">Pigeon Post 0.2.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Pitt, Edward Abraham, Tim McNamara.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

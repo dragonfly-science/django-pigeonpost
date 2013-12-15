@@ -1,0 +1,198 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Getting Started &mdash; Pigeon Post 0.2.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pigeon Post 0.2.1 documentation" href="index.html" />
+    <link rel="next" title="Detailed usage" href="api.html" />
+    <link rel="prev" title="Welcome to Pigeon Post’s documentation!" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="api.html" title="Detailed usage"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to Pigeon Post’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pigeon Post 0.2.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>Pigeonpost has two core models:</p>
+<ul class="simple">
+<li><strong>Pigeons</strong> - these represent an intention to send out a message. They need to be
+associated with another model inside your project. When the
+<tt class="docutils literal"><span class="pre">deploy_pigeons</span></tt> action occurs, the associated model has the ability to
+decide which users to send the message to (if any), and control per-user
+rendering of the email.</li>
+<li><strong>Outbox</strong> - these are messages that have been rendered and track whether they&#8217;ve
+successfully been sent. The rendering of a Pigeon may depend on the state of
+the model the pigeon is associated with, so storing the rendered messages
+is useful as an audit of what has, or will be, sent.</li>
+</ul>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="get-the-code">
+<h3>Get the code<a class="headerlink" href="#get-the-code" title="Permalink to this headline">¶</a></h3>
+<p>The easiest way is to use <tt class="docutils literal"><span class="pre">pip</span></tt>:</p>
+<div class="highlight-python"><pre>pip install git+ssh://git@github.com:dragonfly-science/django-pigeonpost.git</pre>
+</div>
+</div>
+<div class="section" id="setup">
+<h3>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li>Add <cite>pigeonpost</cite> to <tt class="docutils literal"><span class="pre">INSTALLED_APPS</span></tt> in the settings file of your Django application</li>
+<li>Make sure that <a class="reference external" href="https://docs.djangoproject.com/en/dev/topics/email/">django is set up for sending email</a>.
+This typically requires the <tt class="docutils literal"><span class="pre">EMAIL_HOST</span></tt>, <tt class="docutils literal"><span class="pre">EMAIL_HOST_USER</span></tt>, and
+<tt class="docutils literal"><span class="pre">EMAIL_HOST_PASSWORD</span></tt> to be set. Other settings include the <tt class="docutils literal"><span class="pre">EMAIL_PORT</span></tt> and
+<tt class="docutils literal"><span class="pre">EMAIL_USE_TLS</span></tt> and are explained in the <a class="reference external" href="https://docs.djangoproject.com/en/1.4/ref/settings/#email-backend">Django documentation</a>.</li>
+<li>Run <tt class="docutils literal"><span class="pre">./manage.py</span> <span class="pre">syncdb</span></tt> to create the pigeonpost models (there are also
+sql migrations for <a class="reference external" href="https://github.com/dragonfly-science/cuckoo-migrations">cuckoo</a>, which is a custom migration tool Dragonfly
+uses. (One day we might transition to South, or just use the inbuilt
+migrations of Django 1.7).</li>
+</ol>
+</div>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>To send mail:</p>
+<ol class="arabic">
+<li><p class="first">Choose the model that makes most sense to associate a pigeon with. This
+might be a Message model, or a blog Post model. Whatever would contain the
+information that is intended to be sent to Users.</p>
+</li>
+<li><p class="first">Give the chosen model a <tt class="docutils literal"><span class="pre">render_email</span></tt> method. The method should return
+a <tt class="xref py py-class docutils literal"><span class="pre">django.core.mail.EmailMessage</span></tt> or None. If no message is returned, no
+email will be sent for that user:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">render_email</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
+    <span class="n">subject</span> <span class="o">=</span> <span class="s">&quot;Hello World!&quot;</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="s">&quot;Have a nice day&quot;</span>
+    <span class="k">return</span> <span class="n">EmailMessage</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="p">[</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">])</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Add an entry to cron to call:</p>
+<div class="highlight-python"><pre>python manage.py deploy_pigeons</pre>
+</div>
+</li>
+<li><p class="first">To test your setup, using your normal SMTP server, but rerouting all email
+to your own email address (i.e. to avoid spamming your users with test email)
+you can change the Pigeonpost Django setting <tt class="docutils literal"><span class="pre">PIGEONPOST_SINK_EMAIL</span></tt>  to
+a string containing your email address. This will also only render the first
+5 emails per pigeon, to avoid spamming your own email address.</p>
+</li>
+</ol>
+<p>You should be good to go!</p>
+</div>
+<div class="section" id="compatibility">
+<h2>Compatibility<a class="headerlink" href="#compatibility" title="Permalink to this headline">¶</a></h2>
+<p>We have successfully used Pigeonpost on Django 1.4 and 1.5. Please file an
+<a class="reference external" href="https://github.com/dragonfly-science/django-pigeonpost/issues">issue</a> if you notice problems with other versions (newer versions are more
+likely to be supported than older ones though).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Getting Started</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a><ul>
+<li><a class="reference internal" href="#get-the-code">Get the code</a></li>
+<li><a class="reference internal" href="#setup">Setup</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+<li><a class="reference internal" href="#compatibility">Compatibility</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to Pigeon Post&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="next chapter">Detailed usage</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/getting_started.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="api.html" title="Detailed usage"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to Pigeon Post’s documentation!"
+             >previous</a> |</li>
+        <li><a href="index.html">Pigeon Post 0.2.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Joel Pitt, Edward Abraham, Tim McNamara.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
