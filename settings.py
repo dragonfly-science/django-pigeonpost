@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'pigeonpost',
     'pigeonpost_example',
     'django_coverage',
+    'south',
 )
 
 SECRET_KEY = '959684cb7a188abc25b9a504db03fbe3'

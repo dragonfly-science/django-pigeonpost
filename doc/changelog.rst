@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.3.2
+-----
+
+* Switch to South migrations. If you have an existing install, you'll have
+  to run ``./manage.py migrate --fake pigeonpost 0001``.
+
 0.3.1
 -----
 
