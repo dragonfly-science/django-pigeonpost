@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.3.1
+-----
+
+* Support Pigeons without model instances, by using model class and classmethods
+
 0.2.0
 -----
 

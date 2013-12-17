@@ -112,6 +112,34 @@ won't be scheduled until 15 minutes after this code begins execution.
 .. warning:: Don't actually call ``sleep`` while processing a request. It
     could potentially block your server from processing other requests!
 
+Sending Pigeons without a model instance
+----------------------------------------
+
+In some situations you may want to send a Pigeon, but without tying it to
+a specific model instance.
+
+From `0.3.1` Pigeonpost will accept a django model class as the signal sender,
+and call ``render_email`` (and similar methods) if they are marked with the
+``@classmethod`` decorator::
+
+    class AggregateNews(models.Model):
+        """ News that is aggregated as a single message """
+        news_bit = models.TextField()
+        read = models.BooleanField(default=False)
+
+        @classmethod
+        def render_email(cls, user):
+            news = cls.objects.filter(read=False)
+            msg_body = []
+            for n in news:
+                msg_body.append(n.news_bit)
+            return EmailMessage("The latest news!", "\n".join(msg_body),
+                    from_email='anon@example.com', to=[user.email]) 
+
+    ...
+    pigeonpost_queue.send(sender=AggregateNews)
+
+
 Helper function for multiple message formats
 --------------------------------------------
 
