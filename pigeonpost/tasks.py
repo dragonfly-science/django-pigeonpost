@@ -2,6 +2,7 @@ import datetime
 import logging
 import smtplib
 import pickle
+import inspect
 
 from django.core import mail
 from django.contrib.contenttypes.models import ContentType
@@ -10,6 +11,7 @@ from django.dispatch import receiver
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.utils.timezone import now
+from django.db import models
 
 from pigeonpost.models import Pigeon, Outbox
 from pigeonpost.signals import pigeonpost_queue
@@ -38,6 +40,13 @@ def unique(the_list):
         seen.add(x)
         yield x
 
+def _get_source(pigeon):
+    if pigeon.source_content_type and not pigeon.source_id:
+        return pigeon.source_content_type.model_class()
+    else:
+        return pigeon.source
+
+
 def process_queue(force=False, dry_run=False):
     """
     Takes pigeons from queue, adds messages to the outbox 
@@ -47,9 +56,10 @@ def process_queue(force=False, dry_run=False):
     else:
         pigeons = Pigeon.objects.filter(scheduled_for__lte=now(), to_send=True)
     for pigeon in pigeons:
-        # Ensure the source object that the pigeon is related to still exists.
-        # If it doesn't, then we just mark the pigeon as processed and move on.
-        if pigeon.source is None:
+        the_source = _get_source(pigeon)
+        if the_source is None:
+            # Ensure the source object that the pigeon is related to still exists.
+            # If it doesn't, then we just mark the pigeon as processed and move on.
             pigeon.to_send = False
             pigeon.failures += 1
             pigeon.save()
@@ -57,12 +67,12 @@ def process_queue(force=False, dry_run=False):
                     (pigeon.id, str(pigeon.source_content_type)) )
             continue
         # Get method for rendering email for each user
-        render_email = getattr(pigeon.source, pigeon.render_email_method)
+        render_email = getattr(the_source, pigeon.render_email_method)
         # Get a list of users to potentially generated emails for
         if pigeon.send_to:
             users = [pigeon.send_to]
         elif pigeon.send_to_method:
-            get_user_method = getattr(pigeon.source, pigeon.send_to_method)
+            get_user_method = getattr(the_source, pigeon.send_to_method)
             users = get_user_method()
         else:
             users = User.objects.filter(is_active=True)
@@ -140,20 +150,42 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
         scheduled_for = now() + datetime.timedelta(seconds=defer_for)
     elif scheduled_for is None:
         scheduled_for = now()
+    # Check that either a model instance, or a model, is responsible for this pigeon
+    if isinstance(sender, models.Model):
+        sender_id = sender.id
+        ct = ContentType.objects.get_for_model(sender)
+    elif inspect.isclass(sender) and issubclass(sender, models.Model):
+        # sender_model
+        sender_id = None
+        ct = ContentType.objects.get_for_model(sender)
+    else:
+        raise Exception("Unknown sender type. Must be models.Model subclass or instance")
     try:
-        p = Pigeon.objects.get(source_content_type=ContentType.objects.get_for_model(sender),
-                source_id=sender.id,
-                render_email_method=render_email_method,
-                send_to=send_to,
-                send_to_method=send_to_method)
-        if p.to_send:
+        if sender_id:
+            p = Pigeon.objects.get(source_content_type=ct,
+                    source_id=sender_id,
+                    render_email_method=render_email_method,
+                    send_to=send_to,
+                    send_to_method=send_to_method)
+            if p.to_send:
+                # If the pigeon has not been sent yet, or to_send has been set to True,
+                # update the pigeon with whatever the new scheduled time is
+                p.scheduled_for = scheduled_for
+                p.save()
+        else:
+            p = Pigeon.objects.get(source_content_type=ct,
+                    source_id=None,
+                    render_email_method=render_email_method,
+                    send_to=send_to,
+                    send_to_method=send_to_method, to_send=True)
             # If the pigeon has not been sent yet, or to_send has been set to True,
             # update the pigeon with whatever the new scheduled time is
             p.scheduled_for = scheduled_for
             p.save()
     except Pigeon.DoesNotExist:
         # Create a new pigeon
-        p = Pigeon(source=sender, render_email_method=render_email_method,
+        p = Pigeon(source_id=sender_id, source_content_type=ct,
+                render_email_method=render_email_method,
                 scheduled_for=scheduled_for,
                 send_to=send_to,
                 send_to_method=send_to_method)

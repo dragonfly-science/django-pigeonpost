@@ -11,7 +11,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from pigeonpost.models import Pigeon, Outbox
-from pigeonpost_example.models import ModeratedNews, News, Profile, BobsNews
+from pigeonpost_example.models import ModeratedNews, News, Profile, BobsNews, AggregateNews
 from pigeonpost.tasks import send_email, kill_pigeons, process_queue
 from pigeonpost.signals import pigeonpost_queue
 
@@ -97,7 +97,6 @@ class TestExampleMessage(TestCase):
 
     def test_email_to_address(self):
         send_email(force=True)
-        messages = Outbox.objects.all()
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(mail.outbox[0].to, ['a@example.com'])
         self.assertEqual(mail.outbox[1].to, ['b@example.com'])
@@ -245,3 +244,35 @@ class TestTargettedPigeons(TestCase):
         process_queue()
         messages = Outbox.objects.all()
         self.assertEqual(len(messages),2)
+
+
+class TestUnboundPigeons(TestCase):
+
+    def setUp(self):
+        self.users, self.staff, _, _ = create_fixtures(create_message=False)
+        self.news = AggregateNews(news_bit='Bob is a great guy.')
+        self.news.save()
+        self.bob = User.objects.get(first_name__iexact='bob')
+
+    def test_send(self):
+        pigeonpost_queue.send(sender=AggregateNews, send_to=self.bob)
+        process_queue()
+
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),1)
+        self.assertEqual(messages[0].user, self.bob)
+
+    def test_double_send(self):
+        pigeonpost_queue.send(sender=AggregateNews, send_to=self.bob)
+        process_queue()
+
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),1)
+        self.assertEqual(messages[0].user, self.bob)
+
+        pigeonpost_queue.send(sender=AggregateNews, send_to=self.bob)
+        process_queue()
+
+        messages = Outbox.objects.all()
+        self.assertEqual(len(messages),2)
+        self.assertEqual(messages[1].user, self.bob)

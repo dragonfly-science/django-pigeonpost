@@ -61,3 +61,18 @@ class BobsNews(models.Model):
 
     def get_everyone_called_bob(self):
         return User.objects.filter(first_name__iexact='bob')
+
+
+class AggregateNews(models.Model):
+    """ News that is aggregated as a single message """
+    news_bit = models.TextField()
+    read = models.BooleanField(default=False)
+
+    @classmethod
+    def render_email(cls, user):
+        news = cls.objects.filter(read=False)
+        msg_body = []
+        for n in news:
+            msg_body.append(n.news_bit)
+        return EmailMessage("The latest news!", "\n".join(msg_body),
+                from_email='anon@example.com', to=[user.email]) 

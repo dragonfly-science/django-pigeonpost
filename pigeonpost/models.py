@@ -7,7 +7,8 @@ class Pigeon(models.Model):
     """ A pigeon is a message that will be delivered to a number of users """
     # Reference to the object we are sending an email about
     source_content_type = models.ForeignKey(ContentType)
-    source_id = models.PositiveIntegerField()  # Assumes the models have an integer primary key
+    # Assumes the models have an integer primary key
+    source_id = models.PositiveIntegerField(null=True, blank=True)
     source = generic.GenericForeignKey('source_content_type', 'source_id')
 
     successes = models.IntegerField(default=0,
