@@ -4,7 +4,9 @@ Changelog
 0.3.1
 -----
 
-* Support Pigeons without model instances, by using model class and classmethods
+* Support Pigeons without model instances, by using model class and
+  classmethods. If you are upgrading you will need to drop the NOT NULL
+  constraint on Pigeon.source_id to use this functionality.
 
 0.2.0
 -----
