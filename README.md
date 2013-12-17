@@ -8,7 +8,7 @@ Pigeonpost is a tool to queue and send emails relating to a Django model.
 
 ## Installation & Usage
 
-See the [Getting Started](doc/getting_started.rst).
+See [Getting Started](http://dragonfly-science.github.io/django-pigeonpost/getting_started.html).
 
 
 ## Licence
