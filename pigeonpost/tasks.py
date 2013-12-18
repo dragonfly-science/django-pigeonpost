@@ -153,11 +153,11 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
     # Check that either a model instance, or a model, is responsible for this pigeon
     if isinstance(sender, models.Model):
         sender_id = sender.id
-        ct = ContentType.objects.get_for_model(sender)
+        ct = ContentType.objects.get_for_model(sender, for_concrete_model=False)
     elif inspect.isclass(sender) and issubclass(sender, models.Model):
         # sender_model
         sender_id = None
-        ct = ContentType.objects.get_for_model(sender)
+        ct = ContentType.objects.get_for_model(sender, for_concrete_model=False)
     else:
         raise Exception("Unknown sender type. Must be models.Model subclass or instance")
     try:

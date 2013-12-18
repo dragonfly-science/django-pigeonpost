@@ -27,8 +27,10 @@ class PigeonAdmin(ModelAdmin):
 
     def source_edit(self, obj):
         ct = obj.source_content_type
-        url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.source_id,))
-        return '<a href="%s">%s</a>' % (url,obj.source,)
+        if obj.source_id:
+            url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.source_id,))
+            return '<a href="%s">%s</a>' % (url,obj.source,)
+        return '' # This must be a model class level pigeon
     source_edit.allow_tags = True
 
 admin.site.register(Pigeon, PigeonAdmin)
