@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, NoReverseMatch
 
 from django.contrib.admin import ModelAdmin
 from pigeonpost.models import Pigeon, Outbox
@@ -28,8 +28,11 @@ class PigeonAdmin(ModelAdmin):
     def source_edit(self, obj):
         ct = obj.source_content_type
         if obj.source_id:
-            url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.source_id,))
-            return '<a href="%s">%s</a>' % (url,obj.source,)
+            try:
+                url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.source_id,))
+                return '<a href="%s">%s</a>' % (url,obj.source,)
+            except NoReverseMatch:
+                pass
         return '' # This must be a model class level pigeon
     source_edit.allow_tags = True
 

@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.3.4
+-----
+
+* Graciously ignore missing url when no admin view is defined for
+  a ContentType.
+
 0.3.3
 -----
 
