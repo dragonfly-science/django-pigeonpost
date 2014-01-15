@@ -83,7 +83,7 @@ def process_queue(force=False, dry_run=False):
         if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
             send_logger.debug("Using sink email and a message for %d users, only sending first 5!" %
                     len(users))
-            users = users[:5]
+            users = users[:getattr(settings, 'PIGEONPOST_SINK_LIMIT', 5)]
         for user in users:
             email = render_email(user)
             if dry_run:

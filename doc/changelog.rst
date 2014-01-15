@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.3.3
+-----
+
+* Add PIGEONPOST_SINK_LIMIT setting to restrict number of users a pigeon is sent
+  to during the development process.
+* Use the content type of proxy models, since these are useful for extending
+  third-part models with pigeonpost behaviour.
+
 0.3.2
 -----
 
