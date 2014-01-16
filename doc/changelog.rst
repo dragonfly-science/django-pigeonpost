@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.3.5
+-----
+
+* Change the way PIGEONPOST_SINK_LIMIT works. Base it on actual emails to
+  be sent rather than users in render list.
+
 0.3.4
 -----
 

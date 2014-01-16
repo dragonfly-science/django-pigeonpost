@@ -79,12 +79,18 @@ def process_queue(force=False, dry_run=False):
         # prevent users getting duplicate emails if the get_user_method is naughty
         # and adds a user twice
         users = list(unique(users))
-        # Iterate through the users and try adding messages to the Outbox model
+
+        sink_limit = None
+        emails_generated = 0
+
         if hasattr(settings, 'PIGEONPOST_SINK_EMAIL'):
             send_logger.debug("Using sink email and a message for %d users, only sending first 5!" %
                     len(users))
-            users = users[:getattr(settings, 'PIGEONPOST_SINK_LIMIT', 5)]
+            sink_limit = getattr(settings, 'PIGEONPOST_SINK_LIMIT', 5)
+
+        # Iterate through the users and try adding messages to the Outbox model
         for user in users:
+            if sink_limit is not None and emails_generated > sink_limit: continue
             email = render_email(user)
             if dry_run:
                 try:
@@ -99,7 +105,8 @@ def process_queue(force=False, dry_run=False):
                 except Outbox.DoesNotExist:
                     pickled = pickle.dumps(email, 2)
                     Outbox(pigeon=pigeon, user=user, message=pickled.encode('base64')).save()
-                pigeon.successes+=1
+                pigeon.successes += 1
+                emails_generated += 1
         pigeon.to_send = False
         pigeon.sent_at = now()
         pigeon.save()
