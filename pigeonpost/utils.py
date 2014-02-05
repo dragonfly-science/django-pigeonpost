@@ -63,7 +63,7 @@ class single_instance(object):
         return datetime.datetime.fromtimestamp(t)
 
 
-def generate_email(to_user, subject, context, text_template, html_template):
+def generate_email(to_user, subject, context, text_template, html_template, from_email=None):
     """ Create an email with html and text versions.
 
     Note that the same context is used for both rendering the text and html
@@ -75,7 +75,11 @@ def generate_email(to_user, subject, context, text_template, html_template):
     context['site'] = current_site
     # First generate the text version
     body = render_to_string(text_template, context)
-    msg = EmailMultiAlternatives(subject, body, to=[to_user.email])
+    if from_email:
+        args = (subject, body, from_email)
+    else:
+        args = (subject, body)
+    msg = EmailMultiAlternatives(*args, to=[to_user.email])
 
     # Then generate the html version with rendered markdown
     html_content = render_to_string(html_template, context)
