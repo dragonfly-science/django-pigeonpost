@@ -71,7 +71,36 @@ class TestExampleMessage(TestCase):
         """ The example Message has a deferred sending time of 6 hours """
         assert((self.pigeon.scheduled_for - datetime.datetime.now()).seconds > 5*60*60) 
         assert((self.pigeon.scheduled_for - datetime.datetime.now()).seconds < 7*60*60) 
-    
+   
+    def test_many_signals_one_pigeon(self):
+        pigeonpost_queue.send(sender=self.message, defer_for=1000)
+        pigeonpost_queue.send(sender=self.message, defer_for=1000)
+        pigeonpost_queue.send(sender=self.message, defer_for=1000)
+        self.assertEqual(Pigeon.objects.count(), 1)
+
+        pigeonpost_queue.send(sender=self.message)
+        process_queue()
+        pigeonpost_queue.send(sender=self.message)
+        process_queue()
+        pigeonpost_queue.send(sender=self.message)
+        process_queue()
+        self.assertEqual(Pigeon.objects.count(), 1)
+
+    def test_resend_pigeon(self):
+        process_queue(force=True)
+        self.assertEqual(Outbox.objects.count(), 2)
+        self.assertEqual(Outbox.objects.filter(user__username='c').count(), 0)
+        # Now another user signs up
+        chelsea = Profile.objects.get(user__username='c')
+        chelsea.subscribed_to_news = True
+        chelsea.save()
+        # And we resend the pigeon
+        pigeonpost_queue.send(sender=self.message, retry=True)
+        process_queue(force=True)
+        # And chelsea gets a message
+        self.assertEqual(Outbox.objects.count(), 3)
+        self.assertEqual(Outbox.objects.filter(user__username='c').count(), 1)
+
     def test_save_many_times(self):
         """ When a message is saved more than once, only one copy should go on the queue """
         self.message.save()

@@ -149,7 +149,14 @@ def process_outbox(max_retries=3, pigeon=None):
         send_logger.exception(err.args[0])
 
 @receiver(pigeonpost_queue)
-def add_to_queue(sender, render_email_method='render_email', send_to=None, send_to_method=None, scheduled_for=None, defer_for=None, **kwargs):
+def add_to_queue(sender, 
+        render_email_method='render_email', 
+        send_to=None, 
+        send_to_method=None, 
+        scheduled_for=None, 
+        defer_for=None, 
+        retry=False,
+        **kwargs):
     # Check that we don't define both scheduled_for and defer_for at the same time. That is silly.
     assert not (scheduled_for and defer_for)
     # Work out the scheduled delivery time if necessary
@@ -174,6 +181,8 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
                     render_email_method=render_email_method,
                     send_to=send_to,
                     send_to_method=send_to_method)
+            if retry:
+                p.to_send = True
             if p.to_send:
                 # If the pigeon has not been sent yet, or to_send has been set to True,
                 # update the pigeon with whatever the new scheduled time is
@@ -184,7 +193,8 @@ def add_to_queue(sender, render_email_method='render_email', send_to=None, send_
                     source_id=None,
                     render_email_method=render_email_method,
                     send_to=send_to,
-                    send_to_method=send_to_method, to_send=True)
+                    send_to_method=send_to_method, 
+                    to_send=True)
             # If the pigeon has not been sent yet, or to_send has been set to True,
             # update the pigeon with whatever the new scheduled time is
             p.scheduled_for = scheduled_for
