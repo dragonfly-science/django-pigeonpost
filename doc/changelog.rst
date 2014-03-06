@@ -1,11 +1,16 @@
 Changelog
 =========
 
-0.3.6
+0.3.7
 -----
 
 * Added in a `retry` argument to the `pigeonpost_queue` signal, so that if a message is retried any new users
   will get sent the message
+
+0.3.6
+-----
+
+* Allow specification of a `from_email` address in the method used to generate the email messages
 
 0.3.5
 -----
