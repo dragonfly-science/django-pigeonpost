@@ -2,6 +2,7 @@ import os
 import sys
 import datetime
 
+from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
@@ -49,8 +50,12 @@ class single_instance(object):
             return True
         if os.path.exists("/proc/%s" % old_pid):
             run_time = datetime.datetime.now() - self.modification_date(full_path)
-            print "PID file %s exists. You already have an instance of the program running" % self.pidfile_name
-            print "It has been running as process %s for %s" % (old_pid,run_time)
+            # Be quiet unless the previous job has been running longer than
+            # settings.PIGEONPOST_WARN_RUNTIME seconds
+            too_long = settings.PIGEONPOST_WARN_RUNTIME if hasattr(settings, 'PIGEONPOST_WARN_RUNTIME') else 0
+            if run_time > datetime.timedelta(seconds=too_long):
+                print "PID file %s exists. You already have an instance of the program running" % self.pidfile_name
+                print "It has been running as process %s for %s" % (old_pid,run_time)
             return True
         else:
             print "PID file %s exists but the program is not running" % self.pidfile_name
