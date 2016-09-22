@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
 
 class Pigeon(models.Model):
@@ -9,7 +9,7 @@ class Pigeon(models.Model):
     source_content_type = models.ForeignKey(ContentType)
     # Assumes the models have an integer primary key
     source_id = models.PositiveIntegerField(null=True, blank=True)
-    source = generic.GenericForeignKey('source_content_type', 'source_id')
+    source = GenericForeignKey('source_content_type', 'source_id')
 
     successes = models.IntegerField(default=0,
             help_text="Number of successful messages sent.")
