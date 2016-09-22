@@ -1,117 +1,63 @@
 # -*- coding: utf-8 -*-
-from south.utils import datetime_utils as datetime
-from south.db import db
-from south.v2 import SchemaMigration
-from django.db import models
+from __future__ import unicode_literals
+
+from django.db import migrations, models
+from django.conf import settings
 
 
-class Migration(SchemaMigration):
+class Migration(migrations.Migration):
 
-    def forwards(self, orm):
-        # Adding model 'Pigeon'
-        db.create_table('pigeonpost_pigeon', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('source_content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'])),
-            ('source_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
-            ('successes', self.gf('django.db.models.fields.IntegerField')(default=0)),
-            ('failures', self.gf('django.db.models.fields.IntegerField')(default=0)),
-            ('to_send', self.gf('django.db.models.fields.BooleanField')(default=True)),
-            ('sent_at', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
-            ('send_to', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'], null=True, blank=True)),
-            ('send_to_method', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
-            ('render_email_method', self.gf('django.db.models.fields.TextField')(default='render_email')),
-            ('scheduled_for', self.gf('django.db.models.fields.DateTimeField')()),
-        ))
-        db.send_create_signal('pigeonpost', ['Pigeon'])
+    dependencies = [
+        ('contenttypes', '0002_remove_content_type_name'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
 
-        # Adding model 'Outbox'
-        db.create_table('pigeonpost_outbox', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('pigeon', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['pigeonpost.Pigeon'], null=True, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('message', self.gf('django.db.models.fields.TextField')()),
-            ('sent_at', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
-            ('succeeded', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('failures', self.gf('django.db.models.fields.IntegerField')(default=0)),
-        ))
-        db.send_create_signal('pigeonpost', ['Outbox'])
-
-        # Adding unique constraint on 'Outbox', fields ['pigeon', 'user']
-        db.create_unique('pigeonpost_outbox', ['pigeon_id', 'user_id'])
-
-
-    def backwards(self, orm):
-        # Removing unique constraint on 'Outbox', fields ['pigeon', 'user']
-        db.delete_unique('pigeonpost_outbox', ['pigeon_id', 'user_id'])
-
-        # Deleting model 'Pigeon'
-        db.delete_table('pigeonpost_pigeon')
-
-        # Deleting model 'Outbox'
-        db.delete_table('pigeonpost_outbox')
-
-
-    models = {
-        'auth.group': {
-            'Meta': {'object_name': 'Group'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '80'}),
-            'permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'})
-        },
-        'auth.permission': {
-            'Meta': {'ordering': "('content_type__app_label', 'content_type__model', 'codename')", 'unique_together': "(('content_type', 'codename'),)", 'object_name': 'Permission'},
-            'codename': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
-        },
-        'auth.user': {
-            'Meta': {'object_name': 'User'},
-            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
-            'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'groups': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Group']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'is_superuser': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'last_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'}),
-            'username': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '30'})
-        },
-        'contenttypes.contenttype': {
-            'Meta': {'ordering': "('name',)", 'unique_together': "(('app_label', 'model'),)", 'object_name': 'ContentType', 'db_table': "'django_content_type'"},
-            'app_label': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
-        },
-        'pigeonpost.outbox': {
-            'Meta': {'ordering': "['sent_at']", 'unique_together': "(('pigeon', 'user'),)", 'object_name': 'Outbox'},
-            'failures': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'message': ('django.db.models.fields.TextField', [], {}),
-            'pigeon': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['pigeonpost.Pigeon']", 'null': 'True', 'blank': 'True'}),
-            'sent_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
-            'succeeded': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"})
-        },
-        'pigeonpost.pigeon': {
-            'Meta': {'ordering': "['scheduled_for']", 'object_name': 'Pigeon'},
-            'failures': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'render_email_method': ('django.db.models.fields.TextField', [], {'default': "'render_email'"}),
-            'scheduled_for': ('django.db.models.fields.DateTimeField', [], {}),
-            'send_to': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']", 'null': 'True', 'blank': 'True'}),
-            'send_to_method': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
-            'sent_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
-            'source_content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
-            'source_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'successes': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'to_send': ('django.db.models.fields.BooleanField', [], {'default': 'True'})
-        }
-    }
-
-    complete_apps = ['pigeonpost']
+    operations = [
+        migrations.CreateModel(
+            name='Outbox',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('message', models.TextField()),
+                ('sent_at', models.DateTimeField(null=True, blank=True)),
+                ('succeeded', models.BooleanField(default=False)),
+                ('failures', models.IntegerField(default=0)),
+            ],
+            options={
+                'ordering': ['sent_at'],
+                'verbose_name_plural': 'outboxes',
+            },
+        ),
+        migrations.CreateModel(
+            name='Pigeon',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('source_id', models.PositiveIntegerField(null=True, blank=True)),
+                ('successes', models.IntegerField(default=0, help_text=b'Number of successful messages sent.')),
+                ('failures', models.IntegerField(default=0, help_text=b'Number of errors encountered while sending.')),
+                ('to_send', models.BooleanField(default=True, help_text=b'Whether this object should be sent (some time in the future).')),
+                ('sent_at', models.DateTimeField(help_text=b'Indicates the time that this job was sent.', null=True, blank=True)),
+                ('send_to_method', models.TextField(help_text=b'If specified, we call send_to_method to get the users that will be called with render_email_method.', null=True, blank=True)),
+                ('render_email_method', models.TextField(default=b'render_email', help_text=b'The name of the method to be called on the sender to generates an EmailMessage for each User.')),
+                ('scheduled_for', models.DateTimeField(help_text=b'The datetime when emails should be sent. Defaults to ASAP.')),
+                ('send_to', models.ForeignKey(blank=True, to=settings.AUTH_USER_MODEL, help_text=b'If specified, we call only call render_email_method for this user.', null=True)),
+                ('source_content_type', models.ForeignKey(to='contenttypes.ContentType')),
+            ],
+            options={
+                'ordering': ['scheduled_for'],
+            },
+        ),
+        migrations.AddField(
+            model_name='outbox',
+            name='pigeon',
+            field=models.ForeignKey(blank=True, to='pigeonpost.Pigeon', null=True),
+        ),
+        migrations.AddField(
+            model_name='outbox',
+            name='user',
+            field=models.ForeignKey(to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AlterUniqueTogether(
+            name='outbox',
+            unique_together=set([('pigeon', 'user')]),
+        ),
+    ]
