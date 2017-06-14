@@ -141,6 +141,8 @@ def process_outbox(max_retries=3, pigeon=None):
                 msg.sent_at = now()
             except (smtplib.SMTPException, smtplib.socket.error) as err:
                 send_logger.debug("Message failed!")
+                if type(err) == smtplib.SMTPRecipientsRefused:
+                    send_logger.error("Failed sending mail to %s" % ','.join(email.to))
                 send_logger.exception(err.args[0])
                 msg.failures += 1
             msg.save()
